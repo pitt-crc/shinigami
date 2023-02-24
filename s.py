@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-'''
+"""
 Written By:     Barry Moore II
 Purpose:        Kill errant processes on compute nodes. Slurm doesn't clean up well after itself.
 Name Origin:    Shinigami are gods or supernatural spirits which invite humans to death.
-'''
+"""
+
 from subprocess import Popen, PIPE
 from shlex import split
 from datetime import datetime
@@ -20,21 +21,19 @@ def run_command(command):
 
 
 # The clusters we want to check for dead processes
-####clusters = ["smp", "gpu", "mpi", "invest"]
 clusters = ["gpu", "mpi", "invest"]
-####clusters = ["smp", "gpu", "htc", "mpi", "invest"]
 
 # Figure out which nodes are active
 nodelist = {}
 for cluster in clusters:
-####    print_nodelist = True
+    # print_nodelist = True
     nodelist[cluster] = []
     nodes = run_command_to_list("sinfo -M {0} -t mix,alloc,idle -N -o %N -h".format(cluster))
     for node in nodes:
         if not node == '':
-####            if print_nodelist:
-####                nodelist[cluster] = []
-####                print_nodelist = False
+            # if print_nodelist:
+            #     nodelist[cluster] = []
+            #     print_nodelist = False
             if node.strip() not in nodelist[cluster]:
                 nodelist[cluster].append(node.strip())
 
@@ -53,9 +52,9 @@ for cluster in nodelist.keys():
         if "ppc-n" in node:
             continue
 
-	if "mems-n" in node:
+        if "mems-n" in node:
             continue
-        
+
         # Are there running jobs on this node?
         slurm_jobs = run_command_to_list("squeue -h -M {0} -w {1} -o %A".format(cluster, node))
         slurm_users = []
@@ -72,12 +71,15 @@ for cluster in nodelist.keys():
             sp = line.split()
             try:
                 pid, user, uid, time, cmd = int(sp[0]), sp[1], int(sp[2]), sp[3], sp[4:]
+
             except IndexError:
                 # Issue on the node, log it, move to the next
                 with open("/zfs1/crc/logs/shinigamit/{0}.log".format(node), 'a') as log:
                     log.write("--> {0} <--\n".format(datetime.now()))
                     log.write("shinigami error")
+
                 continue
+
             if uid >= 15000: # Probably need to add a whitelist here!
                 if user not in proc_users:
                     proc_users.append((user, time, cmd, pid))
@@ -88,12 +90,14 @@ for cluster in nodelist.keys():
         for user, time, cmd, pid in proc_users:
             if (user in ['leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping', 'gam134']) and (user not in slurm_users):
                 admin_log += "node: {0}, user: {1}, time: {2}, cmd: {3}, pid: {4}\n".format(node, user, time, cmd, pid)
+
             elif user not in slurm_users:
                 if user not in to_kill.keys():
                     to_kill[user] = [pid]
+
                 else:
                     to_kill[user].append(pid)
-                #to_log += "node: {0}, user: {1}, time: {2}, cmd: {3}, pid: {4}\n".format(node, user, time, cmd, pid)
+                # to_log += "node: {0}, user: {1}, time: {2}, cmd: {3}, pid: {4}\n".format(node, user, time, cmd, pid)
 
         # Log information (if necessary)
         if to_kill:
@@ -103,6 +107,7 @@ for cluster in nodelist.keys():
                     kill_str = ' '.join([str(x) for x in pids])
                     run_command("ssh {0} 'kill -9 {1}'".format(node, kill_str))
                     log.write("User {0}, got `kill -9 {1}`".format(user, kill_str))
+
         if len(admin_log) != 0:
             with open("/zfs1/crc/logs/shinigamit/{0}-admin.log".format(node), 'a') as log:
                 log.write("--> {0} <--\n".format(datetime.now()))
