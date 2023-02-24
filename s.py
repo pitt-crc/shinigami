@@ -15,13 +15,18 @@ admin_users = ['leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236'
 log_directory = '/zfs1/crc/logs/shinigamit'  # No trailing slassh
 
 
-def run_command(command):
-    sub_proc = Popen(split(command), stdout=PIPE, stderr=PIPE)
-    return sub_proc.communicate()
-
-
 def run_command_to_list(command):
-    return run_command(command)[0].strip().split('\n')
+    """Run a shell command and return STDOUT as a list
+
+    Args:
+        command: The command to run
+
+    Returns:
+        A list of lines written to STDOUT by the command
+    """
+
+    sub_proc = Popen(split(command), stdout=PIPE, stderr=PIPE)
+    return sub_proc.communicate()[0].strip().split('\n')
 
 
 # Figure out which nodes are active
@@ -99,7 +104,7 @@ for cluster in nodelist.keys():
                 log.write("--> {0} <--\n".format(datetime.now()))
                 for user, pids in to_kill.items():
                     kill_str = ' '.join([str(x) for x in pids])
-                    run_command("ssh {0} 'kill -9 {1}'".format(node, kill_str))
+                    run_command_to_list("ssh {0} 'kill -9 {1}'".format(node, kill_str))
                     log.write("User {0}, got `kill -9 {1}`".format(user, kill_str))
 
         if len(admin_log) != 0:
