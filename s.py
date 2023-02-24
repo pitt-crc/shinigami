@@ -10,14 +10,13 @@ from shlex import split
 from subprocess import Popen, PIPE
 
 
-def run_command_to_list(command):
-    sub_proc = Popen(split(command), stdout=PIPE, stderr=PIPE)
-    return sub_proc.communicate()[0].strip().split('\n')
-
-
 def run_command(command):
     sub_proc = Popen(split(command), stdout=PIPE, stderr=PIPE)
     return sub_proc.communicate()
+
+
+def run_command_to_list(command):
+    return run_command(command)[0].strip().split('\n')
 
 
 # The clusters we want to check for dead processes
@@ -83,7 +82,8 @@ for cluster in nodelist.keys():
         # -> Are any users running processes, but not jobs?
         to_kill = {}
         for user, time, cmd, pid in proc_users:
-            if (user in ['leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping', 'gam134']) and (user not in slurm_users):
+            if (user in ['leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping',
+                         'gam134']) and (user not in slurm_users):
                 admin_log += "node: {0}, user: {1}, time: {2}, cmd: {3}, pid: {4}\n".format(node, user, time, cmd, pid)
 
             elif user not in slurm_users:
