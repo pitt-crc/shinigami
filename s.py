@@ -40,7 +40,6 @@ for cluster in clusters:
 for cluster in nodelist.keys():
     for node in nodelist[cluster]:
         # Reset to_log/admin_log strings
-        to_log = ""
         admin_log = ""
 
         if "ppc-n" in node:
@@ -92,7 +91,6 @@ for cluster in nodelist.keys():
 
                 else:
                     to_kill[user].append(pid)
-                # to_log += "node: {0}, user: {1}, time: {2}, cmd: {3}, pid: {4}\n".format(node, user, time, cmd, pid)
 
         # Log information (if necessary)
         if to_kill:
