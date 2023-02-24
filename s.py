@@ -29,9 +29,9 @@ for cluster in clusters:
     nodelist[cluster] = []
     nodes = run_command_to_list("sinfo -M {0} -t mix,alloc,idle -N -o %N -h".format(cluster))
     for node in nodes:
-        if not node == '':
-            if node.strip() not in nodelist[cluster]:
-                nodelist[cluster].append(node.strip())
+        node_name = node.strip()
+        if node != '' and node_name not in nodelist[cluster]:
+            nodelist[cluster].append(node_name)
 
 # `nodelist` now contains dictionary key: cluster, value: list of nodes in mix,alloc,idle states
 # for each node:
