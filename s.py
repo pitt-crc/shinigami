@@ -26,19 +26,14 @@ clusters = ["gpu", "mpi", "invest"]
 # Figure out which nodes are active
 nodelist = {}
 for cluster in clusters:
-    # print_nodelist = True
     nodelist[cluster] = []
     nodes = run_command_to_list("sinfo -M {0} -t mix,alloc,idle -N -o %N -h".format(cluster))
     for node in nodes:
         if not node == '':
-            # if print_nodelist:
-            #     nodelist[cluster] = []
-            #     print_nodelist = False
             if node.strip() not in nodelist[cluster]:
                 nodelist[cluster].append(node.strip())
 
-# `nodelist` now contains dictionary key: cluster, value: list of nodes in
-#   mix,alloc,idle states
+# `nodelist` now contains dictionary key: cluster, value: list of nodes in mix,alloc,idle states
 # for each node:
 # -> check node for users running jobs
 # -> check node for users running processes
