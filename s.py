@@ -9,6 +9,11 @@ from datetime import datetime
 from shlex import split
 from subprocess import Popen, PIPE
 
+# The clusters we want to check for dead processes
+clusters = ["gpu", "mpi", "invest"]
+admin_users = ['leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping', 'gam134']
+log_directory = '/zfs1/crc/logs/shinigamit'  # No trailing slassh
+
 
 def run_command(command):
     sub_proc = Popen(split(command), stdout=PIPE, stderr=PIPE)
@@ -18,9 +23,6 @@ def run_command(command):
 def run_command_to_list(command):
     return run_command(command)[0].strip().split('\n')
 
-
-# The clusters we want to check for dead processes
-clusters = ["gpu", "mpi", "invest"]
 
 # Figure out which nodes are active
 nodelist = {}
@@ -67,7 +69,7 @@ for cluster in nodelist.keys():
 
             except IndexError:
                 # Issue on the node, log it, move to the next
-                with open("/zfs1/crc/logs/shinigamit/{0}.log".format(node), 'a') as log:
+                with open("{0}/{1}.log".format(log_directory, node), 'a') as log:
                     log.write("--> {0} <--\n".format(datetime.now()))
                     log.write("shinigami error")
 
@@ -81,7 +83,7 @@ for cluster in nodelist.keys():
         # -> Are any users running processes, but not jobs?
         to_kill = {}
         for user, time, cmd, pid in proc_users:
-            if (user in ['leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping', 'gam134']) and (user not in slurm_users):
+            if (user in admin_users) and (user not in slurm_users):
                 admin_log += "node: {0}, user: {1}, time: {2}, cmd: {3}, pid: {4}\n".format(node, user, time, cmd, pid)
 
             elif user not in slurm_users:
@@ -93,7 +95,7 @@ for cluster in nodelist.keys():
 
         # Log information (if necessary)
         if to_kill:
-            with open("/zfs1/crc/logs/shinigamit/{0}.log".format(node), 'a') as log:
+            with open("{0}/{1}.log".format(log_directory, node), 'a') as log:
                 log.write("--> {0} <--\n".format(datetime.now()))
                 for user, pids in to_kill.items():
                     kill_str = ' '.join([str(x) for x in pids])
@@ -101,6 +103,6 @@ for cluster in nodelist.keys():
                     log.write("User {0}, got `kill -9 {1}`".format(user, kill_str))
 
         if len(admin_log) != 0:
-            with open("/zfs1/crc/logs/shinigamit/{0}-admin.log".format(node), 'a') as log:
+            with open("{0}/{1}-admin.log".format(log_directory, node), 'a') as log:
                 log.write("--> {0} <--\n".format(datetime.now()))
                 log.write("{0}".format(admin_log))
