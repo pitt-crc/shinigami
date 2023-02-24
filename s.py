@@ -5,9 +5,9 @@ Purpose:        Kill errant processes on compute nodes. Slurm doesn't clean up w
 Name Origin:    Shinigami are gods or supernatural spirits which invite humans to death.
 """
 
-from subprocess import Popen, PIPE
-from shlex import split
 from datetime import datetime
+from shlex import split
+from subprocess import Popen, PIPE
 
 
 def run_command_to_list(command):
