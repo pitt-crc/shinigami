@@ -12,7 +12,7 @@ from subprocess import Popen, PIPE
 # The clusters we want to check for dead processes
 clusters = ["gpu", "mpi", "invest"]
 admin_users = ['leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping', 'gam134']
-log_directory = '/zfs1/crc/logs/shinigamit'  # No trailing slassh
+log_directory = '/zfs1/crc/logs/shinigamit'  # No trailing slash
 
 
 def run_command_to_list(command):
@@ -84,7 +84,7 @@ for cluster in nodelist.keys():
                 if user not in proc_users:
                     proc_users.append((user, time, cmd, pid))
 
-        # slurm_users and proc_users contain non-root/service accounts                        
+        # slurm_users and proc_users contain non-root/service accounts
         # -> Are any users running processes, but not jobs?
         to_kill = {}
         for user, time, cmd, pid in proc_users:
