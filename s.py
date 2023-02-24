@@ -11,13 +11,13 @@ from subprocess import Popen, PIPE
 
 
 def run_command_to_list(command):
-    sp = Popen(split(command), stdout=PIPE, stderr=PIPE)
-    return sp.communicate()[0].strip().split('\n')
+    sub_proc = Popen(split(command), stdout=PIPE, stderr=PIPE)
+    return sub_proc.communicate()[0].strip().split('\n')
 
 
 def run_command(command):
-    sp = Popen(split(command), stdout=PIPE, stderr=PIPE)
-    return sp.communicate()
+    sub_proc = Popen(split(command), stdout=PIPE, stderr=PIPE)
+    return sub_proc.communicate()
 
 
 # The clusters we want to check for dead processes
@@ -53,7 +53,7 @@ for cluster in nodelist.keys():
         # Are there running jobs on this node?
         slurm_jobs = run_command_to_list("squeue -h -M {0} -w {1} -o %A".format(cluster, node))
         slurm_users = []
-        if len(slurm_jobs): # Running Jobs
+        if len(slurm_jobs):  # Running Jobs
             # Who is running the jobs?
             for job in slurm_jobs:
                 user = run_command_to_list("squeue -h -M {0} -w {1} -j {2} -o %u".format(cluster, node, job))[-1]
@@ -75,7 +75,7 @@ for cluster in nodelist.keys():
 
                 continue
 
-            if uid >= 15000: # Probably need to add a whitelist here!
+            if uid >= 15000:  # Probably need to add a whitelist here!
                 if user not in proc_users:
                     proc_users.append((user, time, cmd, pid))
 
