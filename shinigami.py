@@ -1,9 +1,5 @@
 #!/usr/bin/env python
-"""
-Written By:     Barry Moore II
-Purpose:        Kill errant processes on compute nodes. Slurm doesn't clean up well after itself.
-Name Origin:    Shinigami are gods or supernatural spirits which invite humans to death.
-"""
+"""Kill errant Slurm processes on compute nodes"""
 
 from datetime import datetime
 from shlex import split
