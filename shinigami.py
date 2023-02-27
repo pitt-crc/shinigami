@@ -22,7 +22,13 @@ def run_command_to_list(command):
     """
 
     sub_proc = Popen(split(command), stdout=PIPE, stderr=PIPE)
-    return sub_proc.communicate()[0].strip().split('\n')
+    stdout, std_err = sub_proc.communicate()
+
+    # Maintain backward compatibility between Python 2 and 3
+    if isinstance(stdout, bytes):
+        stdout = stdout.decode()
+
+    return str(stdout).strip().split('\n')
 
 
 # Figure out which nodes are active
