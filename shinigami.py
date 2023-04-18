@@ -6,7 +6,8 @@ from shlex import split
 from subprocess import Popen, PIPE
 
 # The clusters we want to check for dead processes
-clusters = ["gpu", "mpi", "invest"]
+debug = True
+clusters = ["smp", "htc", "gpu", "mpi", "invest"]
 admin_users = ['leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping', 'gam134']
 log_directory = '/zfs1/crc/logs/shinigamit'  # No trailing slash
 
@@ -122,7 +123,8 @@ def terminate_errant_processes(cluster, node):
             log.write("--> {0} <--\n".format(datetime.now()))
             for user, pids in to_kill.items():
                 kill_str = ' '.join([str(x) for x in pids])
-                run_command_to_list("ssh {0} 'kill -9 {1}'".format(node, kill_str))
+                if debug:
+                    run_command_to_list("ssh {0} 'kill -9 {1}'".format(node, kill_str))
                 log.write("User {0}, got `kill -9 {1}`".format(user, kill_str))
 
     if len(admin_log) != 0:
