@@ -4,10 +4,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "shinigami"
-version = "0.0.0"  # Version is set dynamically by the CI tool on publication
+version = "0.0.0"
 authors = ["Pitt Center for Research Computing", ]
 readme = "README.md"
-description = "Automatic email notification tool for disk quota usage."
 homepage = "https://github.com/pitt-crc/shinigami"
 repository = "https://github.com/pitt-crc/shinigami"
 
