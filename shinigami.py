@@ -37,7 +37,7 @@ def check_ignore_node(node_name: str, patterns: Optional[Tuple[str, ...]]) -> bo
         A boolean indicating whether the node matches any ignore patterns
     """
 
-    if node_name or patterns is None:
+    if not node_name or patterns is None:
         return True
 
     regex_pattern = r'|'.join(patterns)

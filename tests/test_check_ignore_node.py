@@ -21,7 +21,7 @@ class RegexMatching(TestCase):
         self.assertFalse(check_ignore_node('foo', ('bar', 'biz')))
 
     def test_empty_check_string(self) -> None:
-        """Test the return is ``False`` when the ``node_name`` argument is empty"""
+        """Test the return is ``True`` when the ``node_name`` argument is empty"""
 
         self.assertTrue(check_ignore_node('', ('bar',)))
         self.assertTrue(check_ignore_node('', tuple()))
