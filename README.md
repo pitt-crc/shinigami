@@ -1,4 +1,7 @@
 # Shinigami
+[![](https://app.codacy.com/project/badge/Grade/d5325904cffc4936b24dd6be0d58a1ee)](https://app.codacy.com/gh/pitt-crc/shinigami/dashboard)
+[![](https://app.codacy.com/project/badge/Coverage/d5325904cffc4936b24dd6be0d58a1ee)](https://app.codacy.com/gh/pitt-crc/shinigami/dashboard)
+
 
 Shinigami is a stand alone Python application for killing errant processes on Slurm based compute nodes.
 The application scans for and terminates any running processes not associated with a currently running Slurm job.
