@@ -7,12 +7,20 @@ from shlex import split
 from subprocess import Popen, PIPE
 from typing import Tuple, Optional
 
-# The clusters we want to check for dead processes
+# Log processes but don't terminate them
 debug = True
+
+# The clusters we want to check for dead processes
 clusters = ("smp", "htc", "gpu", "mpi", "invest")
+
+# Users that are never terminated
 admin_users = ('leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping', 'gam134')
-log_directory = '/zfs1/crc/logs/shinigamit'  # No trailing slash
+
+# Nodes to never terminate processes on as a tuple of regex expressions or `None`
 ignore_nodes = (r'.*ppc-n.*', r'.*mems-n.*')
+
+# Logging directory with no trailing slash
+log_directory = '/zfs1/crc/logs/shinigamit'
 
 
 def check_ignore_node(node_name: str, patterns: Optional[Tuple[str, ...]]) -> bool:
