@@ -3,3 +3,6 @@ __pycache__/
 
 # Pycharm IDE file
 .idea/
+
+# Package lock files
+*.lock
