@@ -33,7 +33,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          poetry run coverage run -m unittest discover 
+          poetry run coverage run --source=$(pwd) -m unittest discover tests
           poetry run coverage report --omit="tests/*"
           poetry run coverage xml --omit="tests/*" -o coverage.xml
 
