@@ -1,15 +1,47 @@
 #!/usr/bin/env python
 """Kill errant Slurm processes on compute nodes"""
 
+import re
 from datetime import datetime
 from shlex import split
 from subprocess import Popen, PIPE
+from typing import Tuple, Optional
+
+# Log processes but don't terminate them
+debug = True
 
 # The clusters we want to check for dead processes
-debug = True
-clusters = ["smp", "htc", "gpu", "mpi", "invest"]
-admin_users = ['leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping', 'gam134']
-log_directory = '/zfs1/crc/logs/shinigamit'  # No trailing slash
+clusters = ("smp", "htc", "gpu", "mpi", "invest")
+
+# Users that are never terminated
+admin_users = ('leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping', 'gam134')
+
+# Nodes to never terminate processes on as a tuple of regex expressions or `None`
+ignore_nodes = (r'.*ppc-n.*', r'.*mems-n.*')
+
+# Logging directory with no trailing slash
+log_directory = '/zfs1/crc/logs/shinigamit'
+
+
+def check_ignore_node(node_name: str, patterns: Optional[Tuple[str, ...]]) -> bool:
+    """Determine if a node should be ignored
+    
+    If the ``patterns`` argument is empty or ``None``, the return value is
+    always True.
+
+    Args:
+        node_name: The name of the node to check
+        patterns: Regex patterns indicating node names to ignore
+
+    Returns:
+        A boolean indicating whether the node matches any ignore patterns
+    """
+
+    if not node_name or patterns is None:
+        return True
+
+    regex_pattern = r'|'.join(patterns)
+    return bool(re.findall(regex_pattern, node_name))
 
 
 def run_command_to_list(command):
@@ -65,14 +97,11 @@ def terminate_errant_processes(cluster, node):
         node: The name of the node
     """
 
-    # Reset to_log/admin_log strings
+    if check_ignore_node(node, ignore_nodes):
+        return
+
+        # Reset to_log/admin_log strings
     admin_log = ""
-
-    if "ppc-n" in node:
-        return
-
-    if "mems-n" in node:
-        return
 
     # Are there running jobs on this node?
     slurm_jobs = run_command_to_list("squeue -h -M {0} -w {1} -o %A".format(cluster, node))
