@@ -64,24 +64,19 @@ def run_command_to_list(command):
     return stdout.strip().split('\n')
 
 
-def get_active_nodes():
-    """Return a dictionary of nodes included in each cluster
+def get_nodes(cluster):
+    """Return a set of nodes included a given Slurm cluster
+
+    Args:
+        cluster: Name of the cluster to fetch nodes for
 
     Returns:
-        A dictionary mapping cluster names to a collection of node names
+        A set of cluster names
     """
 
-    # Figure out which nodes are active
-    nodelist = {}
-    for cluster in clusters:
-        nodelist[cluster] = []
-        nodes = run_command_to_list("sinfo -M {0} -t mix,alloc,idle -N -o %N -h".format(cluster))
-        for node in nodes:
-            node_name = node.strip()
-            if node != '' and node_name not in nodelist[cluster]:
-                nodelist[cluster].append(node_name)
-
-    return nodelist
+    nodes = run_command_to_list("sinfo -M {0} -N -o %N -h".format(cluster))
+    unique_nodes = set(nodes) - {''}
+    return unique_nodes
 
 
 def terminate_errant_processes(cluster, node):
@@ -165,9 +160,8 @@ def terminate_errant_processes(cluster, node):
 def main():
     """Iterate over all clusters/nodes and terminate errant processes"""
 
-    nodelist = get_active_nodes()
-    for cluster in nodelist.keys():
-        for node in nodelist[cluster]:
+    for cluster in clusters:
+        for node in get_nodes(cluster):
             terminate_errant_processes(cluster, node)
 
 
