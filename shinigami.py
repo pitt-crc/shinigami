@@ -19,7 +19,7 @@ admin_users = ('leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236'
 # Nodes to never terminate processes on as a tuple of regex expressions or `None`
 ignore_nodes = (r'.*ppc-n.*', r'.*mems-n.*')
 
-logging.basicConfig(filename='/zfs1/crc/logs/shinigamit/log.txt')
+logging.basicConfig(level=logging.INFO, filename='/zfs1/crc/logs/shinigamit/log.txt')
 
 
 def shell_command_to_list(command):
