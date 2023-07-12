@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Kill errant Slurm processes on compute nodes"""
 
+import logging
 import re
-from datetime import datetime
 from shlex import split
 from subprocess import Popen, PIPE
 from typing import Tuple, Optional
@@ -19,8 +19,7 @@ admin_users = ('leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236'
 # Nodes to never terminate processes on as a tuple of regex expressions or `None`
 ignore_nodes = (r'.*ppc-n.*', r'.*mems-n.*')
 
-# Logging directory with no trailing slash
-log_directory = '/zfs1/crc/logs/shinigamit'
+logging.basicConfig(filename='/zfs1/crc/logs/shinigamit/log.txt')
 
 
 def shell_command_to_list(command):
@@ -123,10 +122,7 @@ def terminate_errant_processes(cluster, node):
 
         except IndexError:
             # Issue on the node, log it, move to the next
-            with open("{0}/{1}.log".format(log_directory, node), 'a') as log:
-                log.write("--> {0} <--\n".format(datetime.now()))
-                log.write("shinigami error")
-
+            logging.error("shinigami error")
             continue
 
         if uid >= 15000:  # Probably need to add a whitelist here!
@@ -138,7 +134,7 @@ def terminate_errant_processes(cluster, node):
     to_kill = {}
     for user, time, cmd, pid in proc_users:
         if (user in admin_users) and (user not in slurm_users):
-            admin_log += "node: {0}, user: {1}, time: {2}, cmd: {3}, pid: {4}\n".format(node, user, time, cmd, pid)
+            logging.info("admin user - node: {0}, user: {1}, time: {2}, cmd: {3}, pid: {4}".format(node, user, time, cmd, pid))
 
         elif user not in slurm_users:
             if user not in to_kill.keys():
@@ -149,18 +145,11 @@ def terminate_errant_processes(cluster, node):
 
     # Log information (if necessary)
     if to_kill:
-        with open("{0}/{1}.log".format(log_directory, node), 'a') as log:
-            log.write("--> {0} <--\n".format(datetime.now()))
-            for user, pids in to_kill.items():
-                kill_str = ' '.join([str(x) for x in pids])
-                if not debug:
-                    shell_command_to_list("ssh {0} 'kill -9 {1}'".format(node, kill_str))
-                log.write("User {0}, got `kill -9 {1}`".format(user, kill_str))
-
-    if len(admin_log) != 0:
-        with open("{0}/{1}-admin.log".format(log_directory, node), 'a') as log:
-            log.write("--> {0} <--\n".format(datetime.now()))
-            log.write("{0}".format(admin_log))
+        for user, pids in to_kill.items():
+            kill_str = ' '.join([str(x) for x in pids])
+            if not debug:
+                shell_command_to_list("ssh {0} 'kill -9 {1}'".format(node, kill_str))
+            logging.info("User {0}, got `kill -9 {1}`".format(user, kill_str))
 
 
 def main():
