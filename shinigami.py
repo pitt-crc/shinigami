@@ -23,6 +23,32 @@ ignore_nodes = (r'.*ppc-n.*', r'.*mems-n.*')
 log_directory = '/zfs1/crc/logs/shinigamit'
 
 
+def shell_command_to_list(command):
+    """Run a shell command and return STDOUT as a list
+
+    Args:
+        command: The command to run
+
+    Returns:
+        A list of lines written to STDOUT by the command
+
+    Raises:
+        RuntimeError: If the command writes to STDERR
+        FileNotFoundError: If the command cannot be found
+    """
+
+    sub_proc = Popen(split(command), stdout=PIPE, stderr=PIPE)
+    stdout, stderr = sub_proc.communicate()
+    if stderr:
+        raise RuntimeError(stderr)
+
+    # Maintain backward compatibility between Python 2 and 3
+    if isinstance(stdout, bytes):
+        stdout = stdout.decode()
+
+    return stdout.strip().split('\n')
+
+
 def check_ignore_node(node_name: str, patterns: Optional[Tuple[str, ...]]) -> bool:
     """Determine if a node should be ignored
     
@@ -44,26 +70,6 @@ def check_ignore_node(node_name: str, patterns: Optional[Tuple[str, ...]]) -> bo
     return bool(re.findall(regex_pattern, node_name))
 
 
-def run_command_to_list(command):
-    """Run a shell command and return STDOUT as a list
-
-    Args:
-        command: The command to run
-
-    Returns:
-        A list of lines written to STDOUT by the command
-    """
-
-    sub_proc = Popen(split(command), stdout=PIPE, stderr=PIPE)
-    stdout, _ = sub_proc.communicate()
-
-    # Maintain backward compatibility between Python 2 and 3
-    if isinstance(stdout, bytes):
-        stdout = stdout.decode()
-
-    return stdout.strip().split('\n')
-
-
 def get_active_nodes():
     """Return a dictionary of nodes included in each cluster
 
@@ -75,7 +81,7 @@ def get_active_nodes():
     nodelist = {}
     for cluster in clusters:
         nodelist[cluster] = []
-        nodes = run_command_to_list("sinfo -M {0} -t mix,alloc,idle -N -o %N -h".format(cluster))
+        nodes = shell_command_to_list("sinfo -M {0} -t mix,alloc,idle -N -o %N -h".format(cluster))
         for node in nodes:
             node_name = node.strip()
             if node != '' and node_name not in nodelist[cluster]:
@@ -104,16 +110,16 @@ def terminate_errant_processes(cluster, node):
     admin_log = ""
 
     # Are there running jobs on this node?
-    slurm_jobs = run_command_to_list("squeue -h -M {0} -w {1} -o %A".format(cluster, node))
+    slurm_jobs = shell_command_to_list("squeue -h -M {0} -w {1} -o %A".format(cluster, node))
     slurm_users = []
     if len(slurm_jobs):  # Running Jobs
         # Who is running the jobs?
         for job in slurm_jobs:
-            user = run_command_to_list("squeue -h -M {0} -w {1} -j {2} -o %u".format(cluster, node, job))[-1]
+            user = shell_command_to_list("squeue -h -M {0} -w {1} -j {2} -o %u".format(cluster, node, job))[-1]
             slurm_users.append(user)
 
     # Are there running processes on this node?
-    node_processes_raw = run_command_to_list('ssh {0} "ps --no-heading -eo pid,user,uid,time,cmd"'.format(node))
+    node_processes_raw = shell_command_to_list('ssh {0} "ps --no-heading -eo pid,user,uid,time,cmd"'.format(node))
     proc_users = []
     for line in node_processes_raw:
         sp = line.split()
@@ -153,7 +159,7 @@ def terminate_errant_processes(cluster, node):
             for user, pids in to_kill.items():
                 kill_str = ' '.join([str(x) for x in pids])
                 if not debug:
-                    run_command_to_list("ssh {0} 'kill -9 {1}'".format(node, kill_str))
+                    shell_command_to_list("ssh {0} 'kill -9 {1}'".format(node, kill_str))
                 log.write("User {0}, got `kill -9 {1}`".format(user, kill_str))
 
     if len(admin_log) != 0:
