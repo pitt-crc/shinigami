@@ -75,16 +75,16 @@ def terminate_errant_processes(cluster, node):
         node: The name of the node
     """
 
-    if any(substring in node for substring in ignore_nodes):
-        return
+    logging.info(f'Scanning for processes on node {node}')
 
     # Identify users running valid slurm jobs
     slurm_users = shell_command_to_list(f'squeue -h -M {cluster} -w {node} -o %u')
 
-    # List the pid,user,uid,cmd for each process
+    # Create a list of process info [[pid, user, uid, cmd], ...]
     node_processes_raw = shell_command_to_list(f'ssh {node} "ps --no-heading -eo pid,user,uid,cmd"')
     proc_users = [line.split() for line in node_processes_raw]
 
+    # Identify which processes to kill
     pids_to_kill = []
     for pid, user, uid, cmd in proc_users:
         if (user in admin_users) and (user not in slurm_users):
@@ -98,10 +98,16 @@ def terminate_errant_processes(cluster, node):
 
 
 def main():
-    """Iterate over all clusters/nodes and terminate errant processes"""
+    """Terminate errant processes on all clusters/nodes configured in application settings."""
 
     for cluster in clusters:
+        logging.info(f'Starting scan for cluster {cluster}')
+
         for node in get_nodes(cluster):
+            if any(substring in node for substring in ignore_nodes):
+                logging.info(f'Skipping node {node} on cluster {cluster}')
+                continue
+
             terminate_errant_processes(cluster, node)
 
 
