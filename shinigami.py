@@ -140,7 +140,8 @@ def terminate_errant_processes(cluster, node):
     to_kill = {}
     for user, time, cmd, pid in proc_users:
         if (user in admin_users) and (user not in slurm_users):
-            logging.info("admin user - node: {0}, user: {1}, time: {2}, cmd: {3}, pid: {4}".format(node, user, time, cmd, pid))
+            logging.info(
+                "admin user - node: {0}, user: {1}, time: {2}, cmd: {3}, pid: {4}".format(node, user, time, cmd, pid))
 
         elif user not in slurm_users:
             if user not in to_kill.keys():
