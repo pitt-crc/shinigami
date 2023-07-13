@@ -104,12 +104,12 @@ def terminate_errant_processes(cluster, node):
     # Identify users running valid slurm jobs
     slurm_users = shell_command_to_list(f'squeue -h -M {cluster} -w {node} -o %u')
 
-    # List the pid,user,uid,time,cmd for each process
+    # List the pid,user,uid,cmd for each process
     node_processes_raw = shell_command_to_list(f'ssh {node} "ps --no-heading -eo pid,user,uid,cmd"')
     proc_users = [line.split() for line in node_processes_raw]
 
     pids_to_kill = []
-    for user, cmd, pid in proc_users:
+    for pid, user, uid, cmd in proc_users:
         if (user in admin_users) and (user not in slurm_users):
             logging.debug(f'Marking process for termination user={user} pid={pid}, cmd={cmd}')
             pids_to_kill.append(pid)
