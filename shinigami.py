@@ -111,7 +111,7 @@ def terminate_errant_processes(cluster, node):
     pids_to_kill = []
     for pid, user, uid, cmd in proc_users:
         if (user in admin_users) and (user not in slurm_users):
-            logging.debug(f'Marking process for termination user={user} pid={pid}, cmd={cmd}')
+            logging.debug(f'Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
             pids_to_kill.append(pid)
 
     if not debug:
