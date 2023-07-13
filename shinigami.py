@@ -3,10 +3,8 @@
 
 import logging
 import logging.handlers
-import re
 from shlex import split
 from subprocess import Popen, PIPE
-from typing import Tuple, Optional
 
 # Log processes but don't terminate them
 debug = True
@@ -17,8 +15,8 @@ clusters = ("smp", "htc", "gpu", "mpi", "invest")
 # Users that are never terminated
 admin_users = ('leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping', 'gam134')
 
-# Nodes to never terminate processes on as a tuple of regex expressions or `None`
-ignore_nodes = (r'.*ppc-n.*', r'.*mems-n.*')
+# Ignore nodes with names containing the following text
+ignore_nodes = ('ppc-n', 'mems-n')
 
 # Configure logging
 logger = logging.getLogger('shinigami')
@@ -54,27 +52,6 @@ def shell_command_to_list(command):
     return stdout.strip().split('\n')
 
 
-def check_ignore_node(node_name: str, patterns: Optional[Tuple[str, ...]]) -> bool:
-    """Determine if a node should be ignored
-    
-    If the ``patterns`` argument is empty or ``None``, the return value is
-    always True.
-
-    Args:
-        node_name: The name of the node to check
-        patterns: Regex patterns indicating node names to ignore
-
-    Returns:
-        A boolean indicating whether the node matches any ignore patterns
-    """
-
-    if not node_name or patterns is None:
-        return True
-
-    regex_pattern = r'|'.join(patterns)
-    return bool(re.findall(regex_pattern, node_name))
-
-
 def get_nodes(cluster):
     """Return a set of nodes included a given Slurm cluster
 
@@ -98,7 +75,7 @@ def terminate_errant_processes(cluster, node):
         node: The name of the node
     """
 
-    if check_ignore_node(node, ignore_nodes):
+    if any(substring in node for substring in ignore_nodes):
         return
 
     # Identify users running valid slurm jobs
