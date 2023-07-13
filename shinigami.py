@@ -3,6 +3,7 @@
 
 import logging
 import re
+from pathlib import Path
 from shlex import split
 from subprocess import Popen, PIPE
 from typing import Tuple, Optional
@@ -19,7 +20,9 @@ admin_users = ('leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236'
 # Nodes to never terminate processes on as a tuple of regex expressions or `None`
 ignore_nodes = (r'.*ppc-n.*', r'.*mems-n.*')
 
-logging.basicConfig(level=logging.INFO, filename='/zfs1/crc/logs/shinigamit/log.txt')
+# Log file
+log_path = Path('/var/log/shinigami.txt')
+logging.basicConfig(level=logging.INFO, filename=log_path)
 
 
 def shell_command_to_list(command):
