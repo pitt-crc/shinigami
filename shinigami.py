@@ -3,10 +3,9 @@
 
 import logging
 import logging.handlers
-import re
 from shlex import split
 from subprocess import Popen, PIPE
-from typing import Tuple, Optional
+from typing import Set
 
 # Log processes but don't terminate them
 debug = True
@@ -17,8 +16,8 @@ clusters = ("smp", "htc", "gpu", "mpi", "invest")
 # Users that are never terminated
 admin_users = ('leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping', 'gam134')
 
-# Nodes to never terminate processes on as a tuple of regex expressions or `None`
-ignore_nodes = (r'.*ppc-n.*', r'.*mems-n.*')
+# Ignore nodes with names containing the following text
+ignore_nodes = ('ppc-n', 'mems-n')
 
 # Configure logging
 logger = logging.getLogger('shinigami')
@@ -28,7 +27,7 @@ syslog_handler.setFormatter(formatter)
 logger.addHandler(syslog_handler)
 
 
-def shell_command_to_list(command):
+def shell_command_to_list(command: str) -> list:
     """Run a shell command and return STDOUT as a list
 
     Args:
@@ -47,35 +46,10 @@ def shell_command_to_list(command):
     if stderr:
         raise RuntimeError(stderr)
 
-    # Maintain backward compatibility between Python 2 and 3
-    if isinstance(stdout, bytes):
-        stdout = stdout.decode()
-
-    return stdout.strip().split('\n')
+    return stdout.decode().strip().split('\n')
 
 
-def check_ignore_node(node_name: str, patterns: Optional[Tuple[str, ...]]) -> bool:
-    """Determine if a node should be ignored
-    
-    If the ``patterns`` argument is empty or ``None``, the return value is
-    always True.
-
-    Args:
-        node_name: The name of the node to check
-        patterns: Regex patterns indicating node names to ignore
-
-    Returns:
-        A boolean indicating whether the node matches any ignore patterns
-    """
-
-    if not node_name or patterns is None:
-        return True
-
-    regex_pattern = r'|'.join(patterns)
-    return bool(re.findall(regex_pattern, node_name))
-
-
-def get_nodes(cluster):
+def get_nodes(cluster: str) -> Set[str]:
     """Return a set of nodes included a given Slurm cluster
 
     Args:
@@ -85,29 +59,28 @@ def get_nodes(cluster):
         A set of cluster names
     """
 
-    nodes = shell_command_to_list("sinfo -M {0} -N -o %N -h".format(cluster))
-    unique_nodes = set(nodes) - {''}
-    return unique_nodes
+    nodes = shell_command_to_list(f"sinfo -M {cluster} -N -o %N -h")
+    return set(nodes)
 
 
-def terminate_errant_processes(cluster, node):
-    """Terminate processes on a given node
+def terminate_errant_processes(cluster: str, node: str) -> None:
+    """Terminate non-slurm processes on a given node
 
     Args:
         cluster: The name of the cluster
         node: The name of the node
     """
 
-    if check_ignore_node(node, ignore_nodes):
-        return
+    logging.info(f'Scanning for processes on node {node}')
 
     # Identify users running valid slurm jobs
     slurm_users = shell_command_to_list(f'squeue -h -M {cluster} -w {node} -o %u')
 
-    # List the pid,user,uid,cmd for each process
+    # Create a list of process info [[pid, user, uid, cmd], ...]
     node_processes_raw = shell_command_to_list(f'ssh {node} "ps --no-heading -eo pid,user,uid,cmd"')
     proc_users = [line.split() for line in node_processes_raw]
 
+    # Identify which processes to kill
     pids_to_kill = []
     for pid, user, uid, cmd in proc_users:
         if (user in admin_users) and (user not in slurm_users):
@@ -117,14 +90,20 @@ def terminate_errant_processes(cluster, node):
     if not debug:
         kill_str = ' '.join(pids_to_kill)
         logging.info("Sending termination signal")
-        shell_command_to_list("ssh {0} 'kill -9 {1}'".format(node, kill_str))
+        shell_command_to_list(f"ssh {node} 'kill -9 {kill_str}'")
 
 
-def main():
-    """Iterate over all clusters/nodes and terminate errant processes"""
+def main() -> None:
+    """Terminate errant processes on all clusters/nodes configured in application settings."""
 
     for cluster in clusters:
+        logging.info(f'Starting scan for cluster {cluster}')
+
         for node in get_nodes(cluster):
+            if any(substring in node for substring in ignore_nodes):
+                logging.info(f'Skipping node {node} on cluster {cluster}')
+                continue
+
             terminate_errant_processes(cluster, node)
 
 
