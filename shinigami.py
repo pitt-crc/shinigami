@@ -5,6 +5,7 @@ import logging
 import logging.handlers
 from shlex import split
 from subprocess import Popen, PIPE
+from typing import Set
 
 # Log processes but don't terminate them
 debug = True
@@ -26,7 +27,7 @@ syslog_handler.setFormatter(formatter)
 logger.addHandler(syslog_handler)
 
 
-def shell_command_to_list(command):
+def shell_command_to_list(command: str) -> list:
     """Run a shell command and return STDOUT as a list
 
     Args:
@@ -45,14 +46,10 @@ def shell_command_to_list(command):
     if stderr:
         raise RuntimeError(stderr)
 
-    # Maintain backward compatibility between Python 2 and 3
-    if isinstance(stdout, bytes):
-        stdout = stdout.decode()
-
-    return stdout.strip().split('\n')
+    return stdout.decode().strip().split('\n')
 
 
-def get_nodes(cluster):
+def get_nodes(cluster: str) -> Set[str]:
     """Return a set of nodes included a given Slurm cluster
 
     Args:
@@ -62,12 +59,12 @@ def get_nodes(cluster):
         A set of cluster names
     """
 
-    nodes = shell_command_to_list("sinfo -M {0} -N -o %N -h".format(cluster))
+    nodes = shell_command_to_list(f"sinfo -M {cluster} -N -o %N -h")
     unique_nodes = set(nodes) - {''}
     return unique_nodes
 
 
-def terminate_errant_processes(cluster, node):
+def terminate_errant_processes(cluster: str, node: str) -> None:
     """Terminate processes on a given node
 
     Args:
@@ -94,10 +91,10 @@ def terminate_errant_processes(cluster, node):
     if not debug:
         kill_str = ' '.join(pids_to_kill)
         logging.info("Sending termination signal")
-        shell_command_to_list("ssh {0} 'kill -9 {1}'".format(node, kill_str))
+        shell_command_to_list(f"ssh {node} 'kill -9 {kill_str}'")
 
 
-def main():
+def main() -> None:
     """Terminate errant processes on all clusters/nodes configured in application settings."""
 
     for cluster in clusters:
