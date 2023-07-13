@@ -2,6 +2,7 @@
 """Kill errant Slurm processes on compute nodes"""
 
 import logging
+import logging.handlers
 import re
 from shlex import split
 from subprocess import Popen, PIPE
