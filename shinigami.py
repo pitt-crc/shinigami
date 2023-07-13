@@ -60,12 +60,11 @@ def get_nodes(cluster: str) -> Set[str]:
     """
 
     nodes = shell_command_to_list(f"sinfo -M {cluster} -N -o %N -h")
-    unique_nodes = set(nodes) - {''}
-    return unique_nodes
+    return set(nodes)
 
 
 def terminate_errant_processes(cluster: str, node: str) -> None:
-    """Terminate processes on a given node
+    """Terminate non-slurm processes on a given node
 
     Args:
         cluster: The name of the cluster
