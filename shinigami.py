@@ -93,11 +93,6 @@ def get_nodes(cluster):
 def terminate_errant_processes(cluster, node):
     """Terminate processes on a given node
 
-    For the given node:
-      - Check for users running jobs
-      - Check for users running processes
-      - Kill any processes by users without running jobs
-
     Args:
         cluster: The name of the cluster
         node: The name of the node
@@ -106,57 +101,23 @@ def terminate_errant_processes(cluster, node):
     if check_ignore_node(node, ignore_nodes):
         return
 
-        # Reset to_log/admin_log strings
-    admin_log = ""
+    # Identify users running valid slurm jobs
+    slurm_users = shell_command_to_list(f'squeue -h -M {cluster} -w {node} -o %u')
 
-    # Are there running jobs on this node?
-    slurm_jobs = shell_command_to_list("squeue -h -M {0} -w {1} -o %A".format(cluster, node))
-    slurm_users = []
-    if len(slurm_jobs):  # Running Jobs
-        # Who is running the jobs?
-        for job in slurm_jobs:
-            user = shell_command_to_list("squeue -h -M {0} -w {1} -j {2} -o %u".format(cluster, node, job))[-1]
-            slurm_users.append(user)
+    # List the pid,user,uid,cmd for each process
+    node_processes_raw = shell_command_to_list(f'ssh {node} "ps --no-heading -eo pid,user,uid,cmd"')
+    proc_users = [line.split() for line in node_processes_raw]
 
-    # Are there running processes on this node?
-    node_processes_raw = shell_command_to_list('ssh {0} "ps --no-heading -eo pid,user,uid,time,cmd"'.format(node))
-    proc_users = []
-    for line in node_processes_raw:
-        sp = line.split()
-        try:
-            pid, user, uid, time, cmd = int(sp[0]), sp[1], int(sp[2]), sp[3], sp[4:]
-
-        except IndexError:
-            # Issue on the node, log it, move to the next
-            logging.error("shinigami error")
-            continue
-
-        if uid >= 15000:  # Probably need to add a whitelist here!
-            if user not in proc_users:
-                proc_users.append((user, time, cmd, pid))
-
-    # slurm_users and proc_users contain non-root/service accounts
-    # -> Are any users running processes, but not jobs?
-    to_kill = {}
-    for user, time, cmd, pid in proc_users:
+    pids_to_kill = []
+    for pid, user, uid, cmd in proc_users:
         if (user in admin_users) and (user not in slurm_users):
-            logging.info(
-                "admin user - node: {0}, user: {1}, time: {2}, cmd: {3}, pid: {4}".format(node, user, time, cmd, pid))
+            logging.debug(f'Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
+            pids_to_kill.append(pid)
 
-        elif user not in slurm_users:
-            if user not in to_kill.keys():
-                to_kill[user] = [pid]
-
-            else:
-                to_kill[user].append(pid)
-
-    # Log information (if necessary)
-    if to_kill:
-        for user, pids in to_kill.items():
-            kill_str = ' '.join([str(x) for x in pids])
-            if not debug:
-                shell_command_to_list("ssh {0} 'kill -9 {1}'".format(node, kill_str))
-            logging.info("User {0}, got `kill -9 {1}`".format(user, kill_str))
+    if not debug:
+        kill_str = ' '.join(pids_to_kill)
+        logging.info("Sending termination signal")
+        shell_command_to_list("ssh {0} 'kill -9 {1}'".format(node, kill_str))
 
 
 def main():
