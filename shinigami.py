@@ -13,7 +13,7 @@ debug = True
 # The clusters we want to check for dead processes
 clusters = ("smp", "htc", "gpu", "mpi", "invest")
 
-# Users that are never terminated
+# User ids that are never terminated
 WHITELIST = (
     154258,  # leb140
     155316,  # djp81
