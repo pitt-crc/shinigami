@@ -1,7 +1,15 @@
+"""Define the application settings schema. """
+
+from __future__ import annotations
+
+from pathlib import Path
 from typing import Set, Tuple, Union
 
+import yaml
 from pydantic import Field
 from pydantic_settings import BaseSettings
+
+_settings_path = Path('/etc/shinigami/settings.yml')
 
 
 class Settings(BaseSettings):
@@ -24,6 +32,7 @@ class Settings(BaseSettings):
 
     clusters: Tuple[str, ...] = Field(
         title='Clusters to Scan',
+        default=tuple(),
         decription='Scan and terminate processes on the given Slurm clusters.')
 
     # Ignore nodes with names containing the following text
@@ -32,3 +41,22 @@ class Settings(BaseSettings):
         default=tuple(),
         description='Do not terminate processes on Slurm nodes containing any of the given substrings in their name.'
     )
+
+    @classmethod
+    def load_from_disk(cls, path: Path = _settings_path) -> Settings:
+        """Create a new class instance using settings files loaded from disk
+
+        Args:
+            path: The path to read values from
+
+        Returns:
+            An instance of the parent class
+
+        Raises:
+            FileNotFoundError: If the given settings file cannot be found
+        """
+
+        if not path.exists():
+            raise FileNotFoundError(f'Could not find settings file: {Path}')
+
+        return cls.model_validate(yaml.safe_load(_settings_path))

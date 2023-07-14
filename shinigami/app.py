@@ -2,12 +2,9 @@
 
 import logging
 import logging.handlers
-from pathlib import Path
 from shlex import split
 from subprocess import Popen, PIPE
 from typing import Set, Union, Tuple, Collection
-
-import yaml
 
 from .settings import Settings
 
@@ -18,12 +15,7 @@ formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
 syslog_handler.setFormatter(formatter)
 logger.addHandler(syslog_handler)
 
-# Configure application settings
-_settings_path = Path('/etc/shinigami/settings.yml')
-if not _settings_path.exists():
-    raise RuntimeError(f'Could not find settings file: {_settings_path}')
-
-SETTINGS = Settings.model_validate(yaml.safe_load(_settings_path))
+SETTINGS = Settings.load_from_disk()
 
 
 def id_in_blacklist(id_value: int, blacklist: Collection[Union[int, Tuple[int, int]]]) -> bool:
