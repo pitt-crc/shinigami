@@ -5,7 +5,7 @@ import logging
 import logging.handlers
 from shlex import split
 from subprocess import Popen, PIPE
-from typing import Set
+from typing import Set, Union, Tuple
 
 # Log processes but don't terminate them
 debug = True
@@ -13,8 +13,22 @@ debug = True
 # The clusters we want to check for dead processes
 clusters = ("smp", "htc", "gpu", "mpi", "invest")
 
-# Users that are never terminated
-admin_users = ('leb140', 'djp81', 'nlc60', 'chx33', 'yak73', 'kimwong', 'sak236', 'jar7', 'twc17', 'fangping', 'gam134')
+# User ids that are never terminated
+# Include individual UIDs or UID ranges
+WHITELIST = (
+    (0, 15000),
+    154258,  # leb140
+    155316,  # djp81
+    157577,  # nlc60
+    153718,  # chx33
+    158335,  # yak73
+    15083,  # kimwong
+    152768,  # sak236
+    15057,  # jar7
+    152118,  # twc17
+    152229,  # fangping
+    157632,  # gam134
+)
 
 # Ignore nodes with names containing the following text
 ignore_nodes = ('ppc-n', 'mems-n')
@@ -25,6 +39,27 @@ syslog_handler = logging.handlers.SysLogHandler('/dev/log')
 formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
 syslog_handler.setFormatter(formatter)
 logger.addHandler(syslog_handler)
+
+
+def id_in_blacklist(id_value: int, blacklist: Tuple[Union[int, Tuple[int, int]]] = WHITELIST) -> bool:
+    """Return whether an ID is in a black list of ID values
+
+    Args:
+        id_value: The ID value to check
+        blacklist: A collection of ID values and ID ranges
+
+    Returns:
+        Whether the ID is in the blacklist
+    """
+
+    for id_def in blacklist:
+        if isinstance(id_def, int) and id_value == id_def:
+            return True
+
+        elif isinstance(id_def, tuple) and (id_def[0] <= id_value <= id_def[1]):
+            return True
+
+    return False
 
 
 def shell_command_to_list(command: str) -> list:
@@ -83,7 +118,7 @@ def terminate_errant_processes(cluster: str, node: str) -> None:
     # Identify which processes to kill
     pids_to_kill = []
     for pid, user, uid, cmd in proc_users:
-        if (user in admin_users) and (user not in slurm_users):
+        if (not id_in_blacklist(int(uid))) and (user not in slurm_users):
             logging.debug(f'Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
             pids_to_kill.append(pid)
 
