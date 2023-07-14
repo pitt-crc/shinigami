@@ -15,7 +15,7 @@ formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
 syslog_handler.setFormatter(formatter)
 logger.addHandler(syslog_handler)
 
-SETTINGS = Settings.load_from_disk()
+SETTINGS = Settings.load_from_disk(skip_not_exists=True)
 
 
 def id_in_blacklist(id_value: int, blacklist: Collection[Union[int, Tuple[int, int]]]) -> bool:
