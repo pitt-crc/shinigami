@@ -4,33 +4,9 @@ import logging
 import logging.handlers
 from shlex import split
 from subprocess import Popen, PIPE
-from typing import Set, Union, Tuple
+from typing import Set, Union, Tuple, Collection
 
-# Log processes but don't terminate them
-debug = True
-
-# The clusters we want to check for dead processes
-clusters = ("smp", "htc", "gpu", "mpi", "invest")
-
-# User ids that are never terminated
-# Include individual UIDs or UID ranges
-WHITELIST = (
-    (0, 15000),
-    154258,  # leb140
-    155316,  # djp81
-    157577,  # nlc60
-    153718,  # chx33
-    158335,  # yak73
-    15083,  # kimwong
-    152768,  # sak236
-    15057,  # jar7
-    152118,  # twc17
-    152229,  # fangping
-    157632,  # gam134
-)
-
-# Ignore nodes with names containing the following text
-ignore_nodes = ('ppc-n', 'mems-n')
+from .settings import Settings
 
 # Configure logging
 logger = logging.getLogger('shinigami')
@@ -39,8 +15,10 @@ formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
 syslog_handler.setFormatter(formatter)
 logger.addHandler(syslog_handler)
 
+SETTINGS = Settings()
 
-def id_in_blacklist(id_value: int, blacklist: Tuple[Union[int, Tuple[int, int]]] = WHITELIST) -> bool:
+
+def id_in_blacklist(id_value: int, blacklist: Collection[Union[int, Tuple[int, int]]]) -> bool:
     """Return whether an ID is in a black list of ID values
 
     Args:
@@ -111,17 +89,21 @@ def terminate_errant_processes(cluster: str, node: str) -> None:
     slurm_users = shell_command_to_list(f'squeue -h -M {cluster} -w {node} -o %u')
 
     # Create a list of process info [[pid, user, uid, cmd], ...]
-    node_processes_raw = shell_command_to_list(f'ssh {node} "ps --no-heading -eo pid,user,uid,cmd"')
+    node_processes_raw = shell_command_to_list(f'ssh {node} "ps --no-heading -eo pid,user,uid,gid,cmd"')
     proc_users = [line.split() for line in node_processes_raw]
 
     # Identify which processes to kill
     pids_to_kill = []
-    for pid, user, uid, cmd in proc_users:
-        if (not id_in_blacklist(int(uid))) and (user not in slurm_users):
+    for pid, user, uid, gid, cmd in proc_users:
+        if not (
+            (user in slurm_users) or
+            id_in_blacklist(int(uid), SETTINGS.uid_whitelist) or
+            id_in_blacklist(int(gid), SETTINGS.gid_whitelist)
+        ):
             logging.debug(f'Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
             pids_to_kill.append(pid)
 
-    if not debug:
+    if not SETTINGS.debug:
         kill_str = ' '.join(pids_to_kill)
         logging.info("Sending termination signal")
         shell_command_to_list(f"ssh {node} 'kill -9 {kill_str}'")
@@ -130,11 +112,11 @@ def terminate_errant_processes(cluster: str, node: str) -> None:
 def main() -> None:
     """Terminate errant processes on all clusters/nodes configured in application settings."""
 
-    for cluster in clusters:
+    for cluster in SETTINGS.clusters:
         logging.info(f'Starting scan for cluster {cluster}')
 
         for node in get_nodes(cluster):
-            if any(substring in node for substring in ignore_nodes):
+            if any(substring in node for substring in SETTINGS.ignore_nodes):
                 logging.info(f'Skipping node {node} on cluster {cluster}')
                 continue
 
