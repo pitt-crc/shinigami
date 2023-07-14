@@ -15,17 +15,17 @@ clusters = ("smp", "htc", "gpu", "mpi", "invest")
 
 # Users that are never terminated
 WHITELIST = (
-    'leb140',
-    'djp81',
-    'nlc60',
-    'chx33',
-    'yak73',
-    'kimwong',
-    'sak236',
-    'jar7',
-    'twc17',
-    'fangping',
-    'gam134'
+    154258,  # leb140
+    155316,  # djp81
+    157577,  # nlc60
+    153718,  # chx33
+    158335,  # yak73
+    15083,  # kimwong
+    152768,  # sak236
+    15057,  # jar7
+    152118,  # twc17
+    152229,  # fangping
+    157632,  # gam134
 )
 
 # Ignore nodes with names containing the following text
