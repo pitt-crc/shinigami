@@ -6,27 +6,17 @@ Shinigami is a stand alone Python application for killing errant processes on Sl
 The application scans for and terminates any running processes not associated with a currently running Slurm job.
 Processes associated with whitelisted users (root, administrators, service accounts, etc.) are ignored.
 
-## Setup and Configuration
+## Installation and Setup
 
-Start by copying `shinigami.py` onto a machine with access to the HPC cluster you wish to administrate.
-The script can be run from any location, but a sensible choice like `/usr/local/sbin/` is recommended.
-Once the file is placed, make sure it has the appropriate permissions:
+The `shinigami` command line utility is installable via the pip (or pipx) package manager:
 
 ```bash
-chmod 750 shinigami.py
+pipx install shinigami
 ```
 
-The script is configurable via global variables defined at the top of the file.
-Set the following variables as appropriate:
-
-| Variable        | Description                                               |
-|-----------------|-----------------------------------------------------------|
-| `clusters`      | A list of Slurm cluster names to scan processes on.       |
-| `admin_users`   | A list of usernames to ignore when terminating processes. |
-| `log_directory` | The directory to write log files to.                      | 
-
-Finally, set up a crontab entry to run the script as often as you see fit.
-The example below runs the script every half hour:
+To be of maximal use, it is recommended to run the utility every half hour.
+However, you may find a different cadence more appropriate depending on your cluster size and use case.
+Running the utility automatically is accomplished via a simple cron job:
 
 ```cron
 0,30 * * * * /usr/local/sbin/shinigami.py
