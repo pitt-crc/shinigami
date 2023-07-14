@@ -140,7 +140,3 @@ def main() -> None:
                 continue
 
             terminate_errant_processes(cluster, node)
-
-
-if __name__ == '__main__':
-    main()
