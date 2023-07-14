@@ -14,7 +14,9 @@ debug = True
 clusters = ("smp", "htc", "gpu", "mpi", "invest")
 
 # User ids that are never terminated
+# Include individual UIDs or UID ranges
 WHITELIST = (
+    (0, 15000),
     154258,  # leb140
     155316,  # djp81
     157577,  # nlc60
