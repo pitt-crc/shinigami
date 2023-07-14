@@ -29,5 +29,6 @@ class Settings(BaseSettings):
     # Ignore nodes with names containing the following text
     ignore_nodes: Tuple[str, ...] = Field(
         title='Ignore Nodes',
+        default=tuple(),
         description='Do not terminate processes on Slurm nodes containing any of the given substrings in their name.'
     )
