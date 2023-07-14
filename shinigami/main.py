@@ -1,21 +1,11 @@
 """The primary application logic."""
 
 import logging
-import logging.handlers
 from shlex import split
 from subprocess import Popen, PIPE
 from typing import Set, Union, Tuple, Collection
 
-from .settings import Settings
-
-# Configure logging
-logger = logging.getLogger('shinigami')
-syslog_handler = logging.handlers.SysLogHandler('/dev/log')
-formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-syslog_handler.setFormatter(formatter)
-logger.addHandler(syslog_handler)
-
-SETTINGS = Settings.load_from_disk(skip_not_exists=True)
+from .settings import SETTINGS
 
 
 def id_in_blacklist(id_value: int, blacklist: Collection[Union[int, Tuple[int, int]]]) -> bool:

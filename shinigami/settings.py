@@ -65,3 +65,6 @@ class Settings(BaseSettings):
 
         else:
             raise FileNotFoundError(f'Could not find settings file: {Path}')
+
+
+SETTINGS = Settings.load_from_disk(skip_not_exists=True)
