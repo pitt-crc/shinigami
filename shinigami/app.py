@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-"""Kill errant Slurm processes on compute nodes"""
+"""The primary application logic."""
 
 import logging
 import logging.handlers
