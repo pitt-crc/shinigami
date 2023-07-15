@@ -2,7 +2,7 @@
 
 from unittest import TestCase
 
-from shinigami.main import shell_command_to_list
+from shinigami.utils import shell_command_to_list
 
 
 class OutputParsing(TestCase):
