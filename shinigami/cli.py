@@ -3,22 +3,23 @@
 import logging
 import logging.handlers
 from argparse import ArgumentParser
-from typing import List
 
 from . import __version__, utils
-from .settings import SETTINGS
+from .settings import SETTINGS, settings_path
 
 
 class Parser(ArgumentParser):
-    """Responsible for defining the commandline interface and parsing commandline arguments"""
+    """Defines the commandline interface and parses commandline arguments"""
 
     def __init__(self) -> None:
         """Define arguments for the command line interface"""
 
         super().__init__(
             prog='shinigami',
-            description='Scan slurm compute nodes and terminate errant processes.',
-        )
+            description=(
+                'Scan slurm compute nodes and terminate errant processes.\n\n'
+                f'See {settings_path} for current application settings.'
+            ))
 
         self.add_argument('--version', action='version', version=__version__)
 
@@ -30,7 +31,7 @@ class Application:
     def _configure_logging(cls) -> None:
         """Configure python logging"""
 
-        logger = logging.getLogger('shinigami')
+        logger = logging.getLogger()
         syslog_handler = logging.handlers.SysLogHandler('/dev/log')
         formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
         syslog_handler.setFormatter(formatter)
@@ -40,8 +41,11 @@ class Application:
     def run() -> None:
         """Terminate errant processes on all clusters/nodes configured in application settings."""
 
+        if SETTINGS.debug:
+            logging.warning('Application is running in debug mode')
+
         for cluster in SETTINGS.clusters:
-            logging.info(f'Starting scan for cluster {cluster}')
+            logging.info(f'Starting scan for nodes in cluster {cluster}')
 
             for node in utils.get_nodes(cluster):
                 if any(substring in node for substring in SETTINGS.ignore_nodes):
@@ -51,17 +55,11 @@ class Application:
                 utils.terminate_errant_processes(cluster, node)
 
     @classmethod
-    def execute(cls, arg_list: List[str] = None) -> None:
-        """Parse arguments and execute the application
-
-        This method is equivalent to parsing arguments and passing them to the `run` method.
-
-        Args:
-            arg_list: Parse the given argument list instead of parsing the command line
-        """
+    def execute(cls) -> None:
+        """Parse commandline arguments and execute the application"""
 
         parser = Parser()
-        parser.parse_args(arg_list)
+        parser.parse_args()
 
         try:
             cls._configure_logging()

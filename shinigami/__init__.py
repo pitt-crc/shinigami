@@ -1,7 +1,10 @@
-"""Shinigami is a stand alone Python application for killing errant processes
+"""Shinigami is a commandline application for killing errant processes
 on Slurm based compute nodes. The application scans for and terminates any
-running processes not associated with a currently running Slurm job. Processes
-associated with whitelisted users are ignored.
+running processes not associated with a currently running Slurm job.
+
+Individual users and groups can be whitelisted in the application settings file
+via UID and GID values. Specific compute nodes can also be ignored using basic
+string matching. See the ``settings`` module for more details.
 """
 
 import importlib.metadata
