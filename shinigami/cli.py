@@ -5,8 +5,7 @@ import logging.handlers
 from argparse import ArgumentParser
 from typing import List
 
-from . import __version__
-from .main import main
+from . import __version__, utils
 from .settings import SETTINGS
 
 
@@ -15,28 +14,21 @@ class Parser(ArgumentParser):
 
     def __init__(self) -> None:
         """Define arguments for the command line interface"""
+
         super().__init__(
             prog='shinigami',
-            description='...',
+            description='Scan slurm compute nodes and terminate errant processes.',
         )
 
         self.add_argument('--version', action='version', version=__version__)
-        self.add_argument('--debug', action='store_true', help='run the application but do not send any emails')
-        self.add_argument(
-            '-v', action='count', dest='verbose', default=0,
-            help='set output verbosity to warning (-v), info (-vv), or debug (-vvv)')
 
 
 class Application:
     """Entry point for instantiating and executing the application"""
 
     @classmethod
-    def _configure_logging(cls, console_log_level: int) -> None:
-        """Configure python logging to the given level
-
-        Args:
-            console_log_level: Logging level to set console logging to
-        """
+    def _configure_logging(cls) -> None:
+        """Configure python logging"""
 
         logger = logging.getLogger('shinigami')
         syslog_handler = logging.handlers.SysLogHandler('/dev/log')
@@ -45,14 +37,18 @@ class Application:
         logger.addHandler(syslog_handler)
 
     @staticmethod
-    def _configure_debug_mode(debug: bool) -> None:
-        """Globally configure debug mode
+    def run() -> None:
+        """Terminate errant processes on all clusters/nodes configured in application settings."""
 
-        Args:
-            debug: Whether to enable (``True``) or disable (``False``) debug mode
-        """
+        for cluster in SETTINGS.clusters:
+            logging.info(f'Starting scan for cluster {cluster}')
 
-        SETTINGS.debug = debug
+            for node in utils.get_nodes(cluster):
+                if any(substring in node for substring in SETTINGS.ignore_nodes):
+                    logging.info(f'Skipping node {node} on cluster {cluster}')
+                    continue
+
+                utils.terminate_errant_processes(cluster, node)
 
     @classmethod
     def execute(cls, arg_list: List[str] = None) -> None:
@@ -65,13 +61,11 @@ class Application:
         """
 
         parser = Parser()
-        args = parser.parse_args(arg_list)
-        if args.debug:
-            cls._configure_debug_mode(True)
-
-        cls._configure_logging(args.verbose)
+        parser.parse_args(arg_list)
 
         try:
-            main()
+            cls._configure_logging()
+            cls.run()
+
         except Exception as excep:
             parser.error(str(excep))

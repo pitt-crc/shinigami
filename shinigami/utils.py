@@ -99,15 +99,3 @@ def terminate_errant_processes(cluster: str, node: str) -> None:
         shell_command_to_list(f"ssh {node} 'kill -9 {kill_str}'")
 
 
-def main() -> None:
-    """Terminate errant processes on all clusters/nodes configured in application settings."""
-
-    for cluster in SETTINGS.clusters:
-        logging.info(f'Starting scan for cluster {cluster}')
-
-        for node in get_nodes(cluster):
-            if any(substring in node for substring in SETTINGS.ignore_nodes):
-                logging.info(f'Skipping node {node} on cluster {cluster}')
-                continue
-
-            terminate_errant_processes(cluster, node)
