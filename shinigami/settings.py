@@ -1,4 +1,8 @@
-"""Define the application settings schema. """
+"""The application settings schema.
+
+Settings are automatically loaded at instantiation and cached under
+the ``SETTINGS`` variable.
+"""
 
 from __future__ import annotations
 
@@ -9,11 +13,11 @@ import yaml
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-_settings_path = Path('/etc/shinigami/settings.yml')
+settings_path = Path('/etc/shinigami/settings.yml')
 
 
 class Settings(BaseSettings):
-    """Defines the schema and default values for top level application settings"""
+    """Defines the settings schema and default settings values"""
 
     debug: bool = Field(
         title='Debug Mode',
@@ -43,12 +47,12 @@ class Settings(BaseSettings):
     )
 
     @classmethod
-    def load_from_disk(cls, path: Path = _settings_path, skip_not_exists: bool = False) -> Settings:
+    def load_from_disk(cls, path: Path = settings_path, skip_not_exists: bool = False) -> Settings:
         """Create a new class instance using settings files loaded from disk
 
         Args:
             path: The path to read values from
-            skip_not_exists: Return default if the given path does not exist
+            skip_not_exists: Return an instance with default values if ``path`` does not exist
 
         Returns:
             An instance of the parent class
@@ -58,10 +62,13 @@ class Settings(BaseSettings):
         """
 
         if path.exists():
-            return cls.model_validate(yaml.safe_load(_settings_path))
+            return cls.model_validate(yaml.safe_load(settings_path))
 
         elif skip_not_exists:
             return cls()
 
         else:
             raise FileNotFoundError(f'Could not find settings file: {Path}')
+
+
+SETTINGS = Settings.load_from_disk(skip_not_exists=True)

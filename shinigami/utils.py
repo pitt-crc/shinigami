@@ -1,25 +1,15 @@
-"""The primary application logic."""
+"""Utilities for fetching system information and terminating processes."""
 
 import logging
-import logging.handlers
 from shlex import split
 from subprocess import Popen, PIPE
 from typing import Set, Union, Tuple, Collection
 
-from .settings import Settings
-
-# Configure logging
-logger = logging.getLogger('shinigami')
-syslog_handler = logging.handlers.SysLogHandler('/dev/log')
-formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-syslog_handler.setFormatter(formatter)
-logger.addHandler(syslog_handler)
-
-SETTINGS = Settings.load_from_disk(skip_not_exists=True)
+from .settings import SETTINGS
 
 
-def id_in_blacklist(id_value: int, blacklist: Collection[Union[int, Tuple[int, int]]]) -> bool:
-    """Return whether an ID is in a black list of ID values
+def id_in_whitelist(id_value: int, blacklist: Collection[Union[int, Tuple[int, int]]]) -> bool:
+    """Return whether an ID is in a list of ID values
 
     Args:
         id_value: The ID value to check
@@ -53,6 +43,7 @@ def shell_command_to_list(command: str) -> list:
         FileNotFoundError: If the command cannot be found
     """
 
+    logging.debug(f'Executing command: {command}')
     sub_proc = Popen(split(command), stdout=PIPE, stderr=PIPE)
     stdout, stderr = sub_proc.communicate()
     if stderr:
@@ -71,8 +62,7 @@ def get_nodes(cluster: str) -> Set[str]:
         A set of cluster names
     """
 
-    nodes = shell_command_to_list(f"sinfo -M {cluster} -N -o %N -h")
-    return set(nodes)
+    return set(shell_command_to_list(f"sinfo -M {cluster} -N -o %N -h"))
 
 
 def terminate_errant_processes(cluster: str, node: str) -> None:
@@ -83,9 +73,8 @@ def terminate_errant_processes(cluster: str, node: str) -> None:
         node: The name of the node
     """
 
-    logging.info(f'Scanning for processes on node {node}')
-
     # Identify users running valid slurm jobs
+    logging.info(f'Scanning for processes on node {node}')
     slurm_users = shell_command_to_list(f'squeue -h -M {cluster} -w {node} -o %u')
 
     # Create a list of process info [[pid, user, uid, cmd], ...]
@@ -97,27 +86,13 @@ def terminate_errant_processes(cluster: str, node: str) -> None:
     for pid, user, uid, gid, cmd in proc_users:
         if not (
             (user in slurm_users) or
-            id_in_blacklist(int(uid), SETTINGS.uid_whitelist) or
-            id_in_blacklist(int(gid), SETTINGS.gid_whitelist)
+            id_in_whitelist(int(uid), SETTINGS.uid_whitelist) or
+            id_in_whitelist(int(gid), SETTINGS.gid_whitelist)
         ):
-            logging.debug(f'Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
+            logging.info(f'Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
             pids_to_kill.append(pid)
 
     if not SETTINGS.debug:
         kill_str = ' '.join(pids_to_kill)
         logging.info("Sending termination signal")
         shell_command_to_list(f"ssh {node} 'kill -9 {kill_str}'")
-
-
-def main() -> None:
-    """Terminate errant processes on all clusters/nodes configured in application settings."""
-
-    for cluster in SETTINGS.clusters:
-        logging.info(f'Starting scan for cluster {cluster}')
-
-        for node in get_nodes(cluster):
-            if any(substring in node for substring in SETTINGS.ignore_nodes):
-                logging.info(f'Skipping node {node} on cluster {cluster}')
-                continue
-
-            terminate_errant_processes(cluster, node)
