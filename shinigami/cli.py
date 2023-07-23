@@ -1,5 +1,6 @@
 """The application commandline interface."""
 
+import asyncio
 import logging
 import logging.handlers
 from argparse import ArgumentParser
@@ -38,7 +39,7 @@ class Application:
         logger.addHandler(syslog_handler)
 
     @staticmethod
-    def run() -> None:
+    async def run() -> None:
         """Terminate errant processes on all clusters/nodes configured in application settings."""
 
         if SETTINGS.debug:
@@ -52,7 +53,7 @@ class Application:
                     logging.info(f'Skipping node {node} on cluster {cluster}')
                     continue
 
-                utils.terminate_errant_processes(cluster, node)
+                await utils.terminate_errant_processes(cluster, node)
 
     @classmethod
     def execute(cls) -> None:
@@ -63,7 +64,7 @@ class Application:
 
         try:
             cls._configure_logging()
-            cls.run()
+            asyncio.run(cls.run())
 
         except Exception as excep:
             parser.error(str(excep))

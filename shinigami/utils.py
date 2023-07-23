@@ -5,6 +5,8 @@ from shlex import split
 from subprocess import Popen, PIPE
 from typing import Set, Union, Tuple, Collection
 
+import asyncssh
+
 from .settings import SETTINGS
 
 
@@ -65,7 +67,7 @@ def get_nodes(cluster: str) -> Set[str]:
     return set(shell_command_to_list(f"sinfo -M {cluster} -N -o %N -h"))
 
 
-def terminate_errant_processes(cluster: str, node: str) -> None:
+async def terminate_errant_processes(cluster: str, node: str) -> None:
     """Terminate non-slurm processes on a given node
 
     Args:
@@ -89,10 +91,16 @@ def terminate_errant_processes(cluster: str, node: str) -> None:
             id_in_whitelist(int(uid), SETTINGS.uid_whitelist) or
             id_in_whitelist(int(gid), SETTINGS.gid_whitelist)
         ):
-            logging.info(f'Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
+            logging.debug(f'Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
             pids_to_kill.append(pid)
 
-    if not SETTINGS.debug:
-        kill_str = ' '.join(pids_to_kill)
-        logging.info("Sending termination signal")
-        shell_command_to_list(f"ssh {node} 'kill -9 {kill_str}'")
+    if SETTINGS.debug:
+        return
+
+    async with asyncssh.connect('cluster') as conn:
+        proc_id_str = ' '.join(pids_to_kill)
+        logging.info(f"Sending termination signal for processes {proc_id_str}")
+
+        result = await conn.run(f"ssh {node} 'kill -9 {proc_id_str}'")
+        if result.stderr:
+            logging.error(f'STDERR when killing processes: "{result.stderr}"')
