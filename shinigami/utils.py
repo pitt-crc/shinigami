@@ -3,7 +3,7 @@
 import logging
 from shlex import split
 from subprocess import Popen, PIPE
-from typing import Set, Union, Tuple, Collection
+from typing import Union, Tuple, Collection
 
 import asyncssh
 
@@ -54,7 +54,7 @@ def shell_command_to_list(command: str) -> list:
     return stdout.decode().strip().split('\n')
 
 
-def get_nodes(cluster: str) -> Set[str]:
+async def get_nodes(cluster: str) -> str:
     """Return a set of nodes included a given Slurm cluster
 
     Args:
@@ -64,7 +64,12 @@ def get_nodes(cluster: str) -> Set[str]:
         A set of cluster names
     """
 
-    return set(shell_command_to_list(f"sinfo -M {cluster} -N -o %N -h"))
+    nodes = shell_command_to_list(f"sinfo -M {cluster} -N -o %N -h")
+    for node in set(nodes):
+        if any(substring in node for substring in SETTINGS.ignore_nodes):
+            logging.info(f'Skipping node {node} on cluster {cluster}')
+
+        yield node
 
 
 async def terminate_errant_processes(cluster: str, node: str) -> None:
