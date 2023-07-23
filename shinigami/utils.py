@@ -102,7 +102,7 @@ async def terminate_errant_processes(cluster: str, node: str) -> None:
     if SETTINGS.debug:
         return
 
-    async with asyncssh.connect('cluster') as conn:
+    async with asyncssh.connect(node) as conn:
         proc_id_str = ' '.join(pids_to_kill)
         logging.info(f"Sending termination signal for processes {proc_id_str}")
 
