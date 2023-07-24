@@ -5,6 +5,7 @@ import logging
 import logging.config
 import logging.handlers
 from argparse import ArgumentParser, RawTextHelpFormatter
+from typing import List
 
 from . import __version__, utils
 from .settings import SETTINGS, _settings_path
@@ -103,14 +104,14 @@ class Application:
             )
 
     @classmethod
-    def execute(cls) -> None:
+    def execute(cls, arg_list: List[str] = None) -> None:
         """Parse commandline arguments and execute the application"""
 
         parser = Parser()
-        args = parser.parse_args()
+        args = parser.parse_args(arg_list)
 
         # Calculate the numeric logging level for the console.
-        verbosity = 30 - (10 * args.verbose)
+        verbosity = 40 - (10 * args.verbose)
 
         # Configure the application
         cls._configure_logging(console_log_level=verbosity)
