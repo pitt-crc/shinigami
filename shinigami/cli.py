@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import logging.handlers
-from argparse import ArgumentParser
+from argparse import ArgumentParser, RawTextHelpFormatter
 
 from . import __version__, utils
 from .settings import SETTINGS, settings_path
@@ -13,16 +13,18 @@ class Parser(ArgumentParser):
     """Defines the commandline interface and parses commandline arguments"""
 
     def __init__(self) -> None:
-        """Define arguments for the command line interface"""
+        """Define the commandline interface"""
 
         super().__init__(
             prog='shinigami',
+            formatter_class=RawTextHelpFormatter,  # Allow newlines in description text
             description=(
                 'Scan slurm compute nodes and terminate errant processes.\n\n'
                 f'See {settings_path} for current application settings.'
             ))
 
         self.add_argument('--version', action='version', version=__version__)
+        self.add_argument('--debug', action='store_true', help='force the application to run in debug mode')
 
 
 class Application:
@@ -42,7 +44,7 @@ class Application:
 
     @staticmethod
     def _configure_logging() -> None:
-        """Configure python logging"""
+        """Configure application logging"""
 
         logger = logging.getLogger()
         syslog_handler = logging.handlers.SysLogHandler('/dev/log')
@@ -65,10 +67,10 @@ class Application:
         """Parse commandline arguments and execute the application"""
 
         parser = Parser()
-        parser.parse_args()
+        args = parser.parse_args()
 
         # Configure the application
-        cls._configure_debug()
+        cls._configure_debug(force_debug=args.debug)
         cls._configure_logging()
 
         try:
