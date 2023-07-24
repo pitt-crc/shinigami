@@ -4,7 +4,7 @@ import asyncio
 import logging
 from shlex import split
 from subprocess import Popen, PIPE
-from typing import Union, Tuple, Collection
+from typing import Union, Tuple, Collection, AsyncIterable
 
 import asyncssh
 
@@ -35,7 +35,7 @@ def id_in_whitelist(id_value: int, blacklist: Collection[Union[int, Tuple[int, i
     return False
 
 
-async def get_nodes(cluster: str) -> str:
+async def get_nodes(cluster: str) -> AsyncIterable:
     """Return a set of nodes included a given Slurm cluster
 
     Args:

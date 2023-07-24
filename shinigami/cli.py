@@ -99,9 +99,14 @@ class Application:
 
         for cluster in SETTINGS.clusters:
             logging.info(f'Starting scan for nodes in cluster {cluster}')
-            await asyncio.gather(
-                utils.terminate_errant_processes(cluster, node) for node in utils.get_nodes(cluster)
-            )
+
+            try:
+                await asyncio.gather(
+                    *[utils.terminate_errant_processes(cluster, node) async for node in utils.get_nodes(cluster)]
+                )
+
+            except Exception as caught:
+                logging.error(f'Error for cluster {cluster}: {caught}')
 
     @classmethod
     def execute(cls, arg_list: List[str] = None) -> None:
