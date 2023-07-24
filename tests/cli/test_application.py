@@ -8,6 +8,31 @@ from shinigami.cli import Application
 from shinigami.settings import SETTINGS
 
 
+class DebugEnforcement(TestCase):
+    """Test enabling debug mode from the command line"""
+
+    def test_debug_flag_enabled(self) -> None:
+        """Test the ``debug`` option enables the debug setting"""
+
+        SETTINGS.debug = False
+        Application.execute(['--debug'])
+        self.assertTrue(SETTINGS.debug)
+
+        Application.execute(['--debug'])
+        self.assertTrue(SETTINGS.debug)
+
+    def test_debug_flag_disabled(self) -> None:
+        """Test the debug setting is unchanged when the ``debug`` option is not specified"""
+
+        SETTINGS.debug = False
+        Application.execute([])
+        self.assertFalse(SETTINGS.debug)
+
+        SETTINGS.debug = True
+        Application.execute([])
+        self.assertTrue(SETTINGS.debug)
+
+
 class ConsoleLoggingConfiguration(TestCase):
     """Test the application verbosity is set to match commandline arguments"""
 
