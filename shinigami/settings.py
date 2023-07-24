@@ -39,11 +39,16 @@ class Settings(BaseSettings):
         default=tuple(),
         decription='Scan and terminate processes on the given Slurm clusters.')
 
-    # Ignore nodes with names containing the following text
     ignore_nodes: Tuple[str, ...] = Field(
         title='Ignore Nodes',
         default=tuple(),
-        description='Do not terminate processes on Slurm nodes containing any of the given substrings in their name.'
+        description='Ignore nodes with names containing any of the provided substrings.'
+    )
+
+    max_concurrent: int = Field(
+        title='Maximum SSH Connections',
+        default=10,
+        description='The maximum number of simultaneous SSH connections to open.'
     )
 
     @classmethod

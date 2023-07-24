@@ -1,5 +1,6 @@
 """The application commandline interface."""
 
+import asyncio
 import logging
 import logging.handlers
 from argparse import ArgumentParser
@@ -27,8 +28,20 @@ class Parser(ArgumentParser):
 class Application:
     """Entry point for instantiating and executing the application"""
 
-    @classmethod
-    def _configure_logging(cls) -> None:
+    @staticmethod
+    def _configure_debug(force_debug: bool = False) -> None:
+        """Optionally force the application to run in debug mode
+
+        Args:
+            force_debug: If ``True`` force the application to run in debug mode
+        """
+
+        SETTINGS.debug = SETTINGS.debug or force_debug
+        if SETTINGS.debug:
+            logging.warning('Application is running in debug mode')
+
+    @staticmethod
+    def _configure_logging() -> None:
         """Configure python logging"""
 
         logger = logging.getLogger()
@@ -37,22 +50,15 @@ class Application:
         syslog_handler.setFormatter(formatter)
         logger.addHandler(syslog_handler)
 
-    @staticmethod
-    def run() -> None:
+    @classmethod
+    async def run(cls) -> None:
         """Terminate errant processes on all clusters/nodes configured in application settings."""
-
-        if SETTINGS.debug:
-            logging.warning('Application is running in debug mode')
 
         for cluster in SETTINGS.clusters:
             logging.info(f'Starting scan for nodes in cluster {cluster}')
-
-            for node in utils.get_nodes(cluster):
-                if any(substring in node for substring in SETTINGS.ignore_nodes):
-                    logging.info(f'Skipping node {node} on cluster {cluster}')
-                    continue
-
-                utils.terminate_errant_processes(cluster, node)
+            await asyncio.gather(
+                utils.terminate_errant_processes(cluster, node) for node in utils.get_nodes(cluster)
+            )
 
     @classmethod
     def execute(cls) -> None:
@@ -61,9 +67,12 @@ class Application:
         parser = Parser()
         parser.parse_args()
 
+        # Configure the application
+        cls._configure_debug()
+        cls._configure_logging()
+
         try:
-            cls._configure_logging()
-            cls.run()
+            asyncio.run(cls.run())
 
         except Exception as excep:
             parser.error(str(excep))
