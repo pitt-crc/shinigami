@@ -13,7 +13,7 @@ import yaml
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
-settings_path = Path('/etc/shinigami/settings.yml')
+_settings_path = Path('/etc/shinigami/settings.yml')
 
 
 class Settings(BaseSettings):
@@ -51,29 +51,8 @@ class Settings(BaseSettings):
         description='The maximum number of simultaneous SSH connections to open.'
     )
 
-    @classmethod
-    def load_from_disk(cls, path: Path = settings_path, skip_not_exists: bool = False) -> Settings:
-        """Create a new class instance using settings files loaded from disk
 
-        Args:
-            path: The path to read values from
-            skip_not_exists: Return an instance with default values if ``path`` does not exist
-
-        Returns:
-            An instance of the parent class
-
-        Raises:
-            FileNotFoundError: If ``skip_not_exists`` is ``False`` the given path cannot be found
-        """
-
-        if path.exists():
-            return cls.model_validate(yaml.safe_load(settings_path))
-
-        elif skip_not_exists:
-            return cls()
-
-        else:
-            raise FileNotFoundError(f'Could not find settings file: {Path}')
-
-
-SETTINGS = Settings.load_from_disk(skip_not_exists=True)
+# Load application settings from disk
+SETTINGS = Settings()
+if _settings_path.exists():
+    SETTINGS = SETTINGS.model_validate(yaml.safe_load(_settings_path))
