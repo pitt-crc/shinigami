@@ -1,5 +1,5 @@
 """Utilities for fetching system information and terminating processes."""
-
+import asyncio
 import logging
 from shlex import split
 from subprocess import Popen, PIPE
@@ -8,6 +8,9 @@ from typing import Union, Tuple, Collection
 import asyncssh
 
 from .settings import SETTINGS
+
+# Used to limit the number of concurrent SSH connections
+SSH_SEMAPHORE = asyncio.Semaphore(SETTINGS.max_concurrent)
 
 
 def id_in_whitelist(id_value: int, blacklist: Collection[Union[int, Tuple[int, int]]]) -> bool:
@@ -51,7 +54,8 @@ async def get_nodes(cluster: str) -> str:
         if any(substring in unique_node for substring in SETTINGS.ignore_nodes):
             logging.info(f'Skipping node {unique_node} on cluster {cluster}')
 
-        yield unique_node
+        async with SSH_SEMAPHORE:
+            yield unique_node
 
 
 async def terminate_errant_processes(cluster: str, node: str) -> None:
