@@ -2,6 +2,8 @@
 
 from unittest import TestCase
 
+from shinigami.utils import *
+
 
 class DummyTest(TestCase):
     """A dummy test case"""
@@ -9,4 +11,4 @@ class DummyTest(TestCase):
     def test_something(self) -> None:
         """Test a thing"""
 
-        pass
+        id_in_whitelist
