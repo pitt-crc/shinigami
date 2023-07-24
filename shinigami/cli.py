@@ -26,6 +26,9 @@ class Parser(ArgumentParser):
 
         self.add_argument('--version', action='version', version=__version__)
         self.add_argument('--debug', action='store_true', help='force the application to run in debug mode')
+        self.add_argument(
+            '-v', action='count', dest='verbose', default=0,
+            help='set output verbosity to warning (-v), info (-vv), or debug (-vvv)')
 
 
 class Application:
@@ -80,6 +83,8 @@ class Application:
                 },
             },
             'loggers': {
+                'console_logger': {'handlers': ['console_handler'], 'level': 0, 'propagate': False},
+                'file_logger': {'handlers': ['log_file_handler'], 'level': 0, 'propagate': False},
                 '': {'handlers': ['console_handler', 'log_file_handler'], 'level': 0, 'propagate': False},
             }
         })
@@ -87,6 +92,9 @@ class Application:
     @classmethod
     async def run(cls) -> None:
         """Terminate errant processes on all clusters/nodes configured in application settings."""
+
+        if not SETTINGS.clusters:
+            logging.warning('No cluster names configured in application settings.')
 
         for cluster in SETTINGS.clusters:
             logging.info(f'Starting scan for nodes in cluster {cluster}')
@@ -101,12 +109,16 @@ class Application:
         parser = Parser()
         args = parser.parse_args()
 
+        # Calculate the numeric logging level for the console.
+        verbosity = 30 - (10 * args.verbose)
+
         # Configure the application
+        cls._configure_logging(console_log_level=verbosity)
         cls._configure_debug(force_debug=args.debug)
-        cls._configure_logging()
 
         try:
             asyncio.run(cls.run())
 
-        except Exception as excep:
-            parser.error(str(excep))
+        except Exception as caught:
+            logging.getLogger('file_logger').critical('Application crash', exc_info=caught)
+            logging.getLogger('console_logger').critical(str(caught))
