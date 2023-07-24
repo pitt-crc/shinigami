@@ -7,7 +7,8 @@ the ``SETTINGS`` variable.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Set, Tuple, Union
+from tempfile import NamedTemporaryFile
+from typing import Set, Tuple, Union, Literal, Optional
 
 import yaml
 from pydantic import Field
@@ -50,6 +51,16 @@ class Settings(BaseSettings):
         default=10,
         description='The maximum number of simultaneous SSH connections to open.'
     )
+
+    log_level: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR'] = Field(
+        title='Logging Level',
+        default='INFO',
+        description='Application logging level.')
+
+    log_path: Optional[Path] = Field(
+        title='Log Path',
+        default_factory=lambda: Path(NamedTemporaryFile().name),
+        description='Optionally log application events to a file.')
 
 
 # Load application settings from disk

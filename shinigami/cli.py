@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import logging.config
 import logging.handlers
 from argparse import ArgumentParser, RawTextHelpFormatter
 
@@ -42,15 +43,46 @@ class Application:
         if SETTINGS.debug:
             logging.warning('Application is running in debug mode')
 
-    @staticmethod
-    def _configure_logging() -> None:
-        """Configure application logging"""
+    @classmethod
+    def _configure_logging(cls, console_log_level: int) -> None:
+        """Configure python logging to the given level
 
-        logger = logging.getLogger()
-        syslog_handler = logging.handlers.SysLogHandler('/dev/log')
-        formatter = logging.Formatter('[%(name)s] %(levelname)s - %(message)s')
-        syslog_handler.setFormatter(formatter)
-        logger.addHandler(syslog_handler)
+        Args:
+            console_log_level: Logging level to set console logging to
+        """
+
+        # Logging levels are set at the handler level instead of the logger level
+        # This allows more flexible usage of the root logger
+
+        logging.config.dictConfig({
+            'version': 1,
+            'disable_existing_loggers': True,
+            'formatters': {
+                'console_formatter': {
+                    'format': '%(levelname)8s: %(message)s'
+                },
+                'log_file_formatter': {
+                    'format': '%(levelname)8s | %(asctime)s | %(message)s'
+                },
+            },
+            'handlers': {
+                'console_handler': {
+                    'class': 'logging.StreamHandler',
+                    'stream': 'ext://sys.stdout',
+                    'formatter': 'console_formatter',
+                    'level': console_log_level
+                },
+                'log_file_handler': {
+                    'class': 'logging.FileHandler',
+                    'formatter': 'log_file_formatter',
+                    'level': SETTINGS.log_level,
+                    'filename': SETTINGS.log_path
+                },
+            },
+            'loggers': {
+                '': {'handlers': ['console_handler', 'log_file_handler'], 'level': 0, 'propagate': False},
+            }
+        })
 
     @classmethod
     async def run(cls) -> None:
