@@ -55,4 +55,4 @@ class Settings(BaseSettings):
 # Load application settings from disk
 SETTINGS = Settings()
 if _settings_path.exists():
-    SETTINGS = SETTINGS.model_validate(yaml.safe_load(_settings_path))
+    SETTINGS = SETTINGS.model_validate(yaml.safe_load(_settings_path))  # pragma: no cover

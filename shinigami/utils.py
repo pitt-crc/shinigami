@@ -29,7 +29,7 @@ def id_in_whitelist(id_value: int, blacklist: Collection[Union[int, Tuple[int, i
         if isinstance(id_def, int) and id_value == id_def:
             return True
 
-        elif isinstance(id_def, tuple) and (id_def[0] <= id_value <= id_def[1]):
+        elif isinstance(id_def, (tuple, list)) and (id_def[0] <= id_value <= id_def[1]):
             return True
 
     return False
