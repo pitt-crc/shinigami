@@ -6,7 +6,7 @@ import logging.handlers
 from argparse import ArgumentParser
 
 from . import __version__, utils
-from .settings import SETTINGS, settings_path
+from .settings import SETTINGS, _settings_path
 
 
 class Parser(ArgumentParser):
@@ -19,7 +19,7 @@ class Parser(ArgumentParser):
             prog='shinigami',
             description=(
                 'Scan slurm compute nodes and terminate errant processes.\n\n'
-                f'See {settings_path} for current application settings.'
+                f'See {_settings_path} for current application settings.'
             ))
 
         self.add_argument('--version', action='version', version=__version__)
