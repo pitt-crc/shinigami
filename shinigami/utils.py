@@ -31,29 +31,6 @@ def id_in_whitelist(id_value: int, blacklist: Collection[Union[int, Tuple[int, i
     return False
 
 
-def shell_command_to_list(command: str) -> list:
-    """Run a shell command and return STDOUT as a list
-
-    Args:
-        command: The command to run
-
-    Returns:
-        A list of lines written to STDOUT by the command
-
-    Raises:
-        RuntimeError: If the command writes to STDERR
-        FileNotFoundError: If the command cannot be found
-    """
-
-    logging.debug(f'Executing command: {command}')
-    sub_proc = Popen(split(command), stdout=PIPE, stderr=PIPE)
-    stdout, stderr = sub_proc.communicate()
-    if stderr:
-        raise RuntimeError(stderr)
-
-    return stdout.decode().strip().split('\n')
-
-
 async def get_nodes(cluster: str) -> str:
     """Return a set of nodes included a given Slurm cluster
 
@@ -64,12 +41,17 @@ async def get_nodes(cluster: str) -> str:
         A set of cluster names
     """
 
-    nodes = shell_command_to_list(f"sinfo -M {cluster} -N -o %N -h")
-    for node in set(nodes):
-        if any(substring in node for substring in SETTINGS.ignore_nodes):
-            logging.info(f'Skipping node {node} on cluster {cluster}')
+    sub_proc = Popen(split(f"sinfo -M {cluster} -N -o %N -h"), stdout=PIPE, stderr=PIPE)
+    stdout, stderr = sub_proc.communicate()
+    if stderr:
+        raise RuntimeError(stderr)
 
-        yield node
+    all_nodes = stdout.decode().strip().split('\n')
+    for unique_node in set(all_nodes):
+        if any(substring in unique_node for substring in SETTINGS.ignore_nodes):
+            logging.info(f'Skipping node {unique_node} on cluster {cluster}')
+
+        yield unique_node
 
 
 async def terminate_errant_processes(cluster: str, node: str) -> None:
@@ -80,32 +62,33 @@ async def terminate_errant_processes(cluster: str, node: str) -> None:
         node: The name of the node
     """
 
-    # Identify users running valid slurm jobs
-    logging.info(f'Scanning for processes on node {node}')
-    slurm_users = shell_command_to_list(f'squeue -h -M {cluster} -w {node} -o %u')
-
-    # Create a list of process info [[pid, user, uid, cmd], ...]
-    node_processes_raw = shell_command_to_list(f'ssh {node} "ps --no-heading -eo pid,user,uid,gid,cmd"')
-    proc_users = [line.split() for line in node_processes_raw]
-
-    # Identify which processes to kill
-    pids_to_kill = []
-    for pid, user, uid, gid, cmd in proc_users:
-        if not (
-            (user in slurm_users) or
-            id_in_whitelist(int(uid), SETTINGS.uid_whitelist) or
-            id_in_whitelist(int(gid), SETTINGS.gid_whitelist)
-        ):
-            logging.debug(f'Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
-            pids_to_kill.append(pid)
-
-    if SETTINGS.debug:
-        return
-
     async with asyncssh.connect(node) as conn:
+
+        # Identify users running valid slurm jobs
+        logging.info(f'Scanning for processes on node {node}')
+        slurm_users = conn.run(f'squeue -h -M {cluster} -w {node} -o %u').strip().split('\n')
+
+        # Create a list of process info [[pid, user, uid, cmd], ...]
+        ps_output = conn.run('ps --no-heading -eo pid,user,uid,gid,cmd')
+        proc_users = [line.split() for line in ps_output.strip().split()]
+
+        # Identify which processes to kill
+        pids_to_kill = []
+        for pid, user, uid, gid, cmd in proc_users:
+            if not (
+                (user in slurm_users) or
+                id_in_whitelist(int(uid), SETTINGS.uid_whitelist) or
+                id_in_whitelist(int(gid), SETTINGS.gid_whitelist)
+            ):
+                logging.debug(f'Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
+                pids_to_kill.append(pid)
+
+        if SETTINGS.debug:
+            return
+
         proc_id_str = ' '.join(pids_to_kill)
         logging.info(f"Sending termination signal for processes {proc_id_str}")
 
-        result = await conn.run(f"ssh {node} 'kill -9 {proc_id_str}'")
+        result = await conn.run(f"kill -9 {proc_id_str}")
         if result.stderr:
             logging.error(f'STDERR when killing processes: "{result.stderr}"')

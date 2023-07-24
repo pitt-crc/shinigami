@@ -56,7 +56,9 @@ class Application:
 
         for cluster in SETTINGS.clusters:
             logging.info(f'Starting scan for nodes in cluster {cluster}')
-            await asyncio.gather(utils.terminate_errant_processes(cluster, node) for node in utils.get_nodes(cluster))
+            await asyncio.gather(
+                utils.terminate_errant_processes(cluster, node) for node in utils.get_nodes(cluster)
+            )
 
     @classmethod
     def execute(cls) -> None:
@@ -65,6 +67,7 @@ class Application:
         parser = Parser()
         parser.parse_args()
 
+        # Configure the application
         cls._configure_debug()
         cls._configure_logging()
 
