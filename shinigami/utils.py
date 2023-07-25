@@ -67,8 +67,8 @@ async def terminate_errant_processes(
         cluster: The Slurm name of the cluster to terminate processes on
         node: The DNS resolvable name of the node to terminate processes on
         ssh_limit: Semaphore object used to limit concurrent SSH connections
-        uid_whitelist: Do nt terminate processes owned by the given UID
-        gid_whitelist: Do nt terminate processes owned by the given GID
+        uid_whitelist: Do not terminate processes owned by the given UID
+        gid_whitelist: Do not terminate processes owned by the given GID
         debug: Log which process to terminate but do nt terminate them
     """
 
@@ -76,7 +76,7 @@ async def terminate_errant_processes(
     async with ssh_limit, asyncssh.connect(node) as conn:
 
         # Identify users running valid slurm jobs
-        logging.info(f'Scanning for processes on node {node}')
+        logging.info(f'[{node}] Scanning for processes')
         slurm_users = conn.run(f'squeue -h -M {cluster} -w {node} -o %u').strip().split('\n')
 
         # Create a list of process info [[pid, user, uid, cmd], ...]
@@ -91,15 +91,15 @@ async def terminate_errant_processes(
                 id_in_whitelist(int(uid), uid_whitelist) or
                 id_in_whitelist(int(gid), gid_whitelist)
             ):
-                logging.debug(f'Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
+                logging.debug(f'[{node}] Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
                 pids_to_kill.append(pid)
 
         if debug:
             return
 
         proc_id_str = ' '.join(pids_to_kill)
-        logging.info(f"Sending termination signal for processes {proc_id_str}")
+        logging.info(f"[{node}] Sending termination signal for processes {proc_id_str}")
 
         result = await conn.run(f"kill -9 {proc_id_str}")
         if result.stderr:
-            logging.error(f'STDERR when killing processes: "{result.stderr}"')
+            logging.error(f'[{node}] STDERR when killing processes: "{result.stderr}"')

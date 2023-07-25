@@ -117,7 +117,7 @@ class Application:
             results = await asyncio.gather(*coroutines, return_exceptions=True)
             for node, result in zip(nodes, results):
                 if isinstance(result, Exception):
-                    logging.critical(f'Error with node {node}: {result}')
+                    logging.error(f'Error with node {node}: {result}')
 
     @classmethod
     def execute(cls, arg_list: List[str] = None) -> None:
