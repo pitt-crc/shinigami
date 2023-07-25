@@ -49,7 +49,6 @@ class Application:
 
         self.settings = settings
         self._configure_logging()
-        self._ssh_limit = asyncio.Semaphore(self.settings.max_concurrent)
 
     def _configure_logging(self) -> None:
         """Configure python logging
@@ -98,6 +97,7 @@ class Application:
         if not self.settings.clusters:
             logging.warning('No cluster names configured in application settings.')
 
+        ssh_limit = asyncio.Semaphore(self.settings.max_concurrent)
         for cluster in self.settings.clusters:
             logging.info(f'Starting scan for nodes in cluster {cluster}')
 
@@ -107,7 +107,7 @@ class Application:
                 utils.terminate_errant_processes(
                     cluster,
                     node,
-                    self._ssh_limit,
+                    ssh_limit,
                     self.settings.uid_whitelist,
                     self.settings.gid_whitelist,
                     self.settings.debug)
