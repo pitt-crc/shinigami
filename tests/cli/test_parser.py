@@ -19,3 +19,17 @@ class DebugOption(TestCase):
 
         args = Parser().parse_args(['--debug'])
         self.assertTrue(args.debug)
+
+
+class VerboseOption(TestCase):
+    """Test the verbosity flag"""
+
+    def test_counts_instances(self) -> None:
+        """Test the parse counts the number of provided flags"""
+
+        parser = Parser()
+        self.assertEqual(0, parser.parse_args([]).verbosity)
+        self.assertEqual(1, parser.parse_args(['-v']).verbosity)
+        self.assertEqual(2, parser.parse_args(['-vv']).verbosity)
+        self.assertEqual(3, parser.parse_args(['-vvv']).verbosity)
+        self.assertEqual(5, parser.parse_args(['-vvvvv']).verbosity)

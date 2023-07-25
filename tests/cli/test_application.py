@@ -1,4 +1,4 @@
-"""Tests for the ``Application`` class."""
+"""Tests for the ``cli.Application`` class."""
 
 import logging
 from unittest import TestCase
@@ -72,7 +72,7 @@ class FileLoggingConfiguration(TestCase):
         self.assertIn('log_file_handler', handler_names)
 
     def test_file_logger_has_file_handler(self) -> None:
-        """Test the ``file_logger`` logger has a single ``StreamHandler``"""
+        """Test the ``file_logger`` logger has a single ``FileHandler``"""
 
         Application.execute(['--debug'])
         handlers = logging.getLogger('file_logger').handlers

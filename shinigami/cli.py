@@ -101,7 +101,7 @@ class Application:
         for cluster in self.settings.clusters:
             logging.info(f'Starting scan for nodes in cluster {cluster}')
 
-            # Lunch a concurrent job for each nod in the cluster
+            # Launch a concurrent job for each nod in the cluster
             nodes = utils.get_nodes(cluster, self.settings.ignore_nodes)
             coroutines = [
                 utils.terminate_errant_processes(

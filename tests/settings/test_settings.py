@@ -17,3 +17,18 @@ class Defaults(TestCase):
         """Test the ``debug`` settings defaults to ``False``"""
 
         self.assertFalse(Settings().debug)
+
+    def test_ignore_nodes_empty(self) -> None:
+        """Test the ``ignore_nodes`` setting is empty"""
+
+        self.assertEqual(tuple(), Settings().ignore_nodes)
+
+    def test_uid_ignores_root(self) -> None:
+        """Test the UID whitelist includes UID 0"""
+
+        self.assertIn(0, Settings().uid_whitelist)
+
+    def test_gid_ignores_root(self) -> None:
+        """Test the GID whitelist includes GID 0"""
+
+        self.assertIn(0, Settings().gid_whitelist)

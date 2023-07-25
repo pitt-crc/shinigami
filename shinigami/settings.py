@@ -1,8 +1,4 @@
-"""The application settings schema.
-
-Settings are automatically loaded at instantiation and cached under
-the ``SETTINGS`` variable.
-"""
+"""The application settings schema."""
 
 from __future__ import annotations
 
@@ -40,14 +36,12 @@ class Settings(BaseSettings):
     ignore_nodes: Tuple[str, ...] = Field(
         title='Ignore Nodes',
         default=tuple(),
-        description='Ignore nodes with names containing any of the provided substrings.'
-    )
+        description='Ignore nodes with names containing any of the provided substrings.')
 
     max_concurrent: int = Field(
         title='Maximum SSH Connections',
         default=10,
-        description='The maximum number of simultaneous SSH connections to open.'
-    )
+        description='The maximum number of simultaneous SSH connections to open.')
 
     log_level: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR'] = Field(
         title='Logging Level',
