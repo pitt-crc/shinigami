@@ -5,10 +5,15 @@ import logging
 import logging.config
 import logging.handlers
 from argparse import ArgumentParser, RawTextHelpFormatter
+from pathlib import Path
 from typing import List
 
+import yaml
+
 from . import __version__, utils
-from .settings import SETTINGS, _settings_path
+from .settings import Settings
+
+SETTINGS_PATH = Path('/etc/shinigami/settings.yml')
 
 
 class Parser(ArgumentParser):
@@ -22,41 +27,38 @@ class Parser(ArgumentParser):
             formatter_class=RawTextHelpFormatter,  # Allow newlines in description text
             description=(
                 'Scan slurm compute nodes and terminate errant processes.\n\n'
-                f'See {_settings_path} for current application settings.'
+                f'See {SETTINGS_PATH} for current application settings.'
             ))
 
         self.add_argument('--version', action='version', version=__version__)
         self.add_argument('--debug', action='store_true', help='force the application to run in debug mode')
         self.add_argument(
-            '-v', action='count', dest='verbose', default=0,
+            '-v', action='count', dest='verbosity', default=0,
             help='set output verbosity to warning (-v), info (-vv), or debug (-vvv)')
 
 
 class Application:
     """Entry point for instantiating and executing the application"""
 
-    @staticmethod
-    def _configure_debug(force_debug: bool = False) -> None:
-        """Optionally force the application to run in debug mode
+    def __init__(self, settings: Settings) -> None:
+        """Instantiate a new instance of the application
 
         Args:
-            force_debug: If ``True`` force the application to run in debug mode
+            settings: Settings to use when executing the application
         """
 
-        SETTINGS.debug = SETTINGS.debug or force_debug
-        if SETTINGS.debug:
-            logging.warning('Application is running in debug mode')
+        self.settings = settings
+        self._configure_logging()
+        self._ssh_limit = asyncio.Semaphore(self.settings.max_concurrent)
 
-    @classmethod
-    def _configure_logging(cls, console_log_level: int) -> None:
-        """Configure python logging to the given level
+    def _configure_logging(self) -> None:
+        """Configure python logging
 
-        Args:
-            console_log_level: Logging level to set console logging to
+        Configured loggers:
+            console_logger: For logging to the console only
+            file_logger: For logging to the lg file only
+            root: For logging to console and the log file
         """
-
-        # Logging levels are set at the handler level instead of the logger level
-        # This allows more flexible usage of the root logger
 
         logging.config.dictConfig({
             'version': 1,
@@ -74,13 +76,13 @@ class Application:
                     'class': 'logging.StreamHandler',
                     'stream': 'ext://sys.stdout',
                     'formatter': 'console_formatter',
-                    'level': console_log_level
+                    'level': self.settings.verbosity
                 },
                 'log_file_handler': {
                     'class': 'logging.FileHandler',
                     'formatter': 'log_file_formatter',
-                    'level': SETTINGS.log_level,
-                    'filename': SETTINGS.log_path
+                    'level': self.settings.log_level,
+                    'filename': self.settings.log_path
                 },
             },
             'loggers': {
@@ -90,40 +92,49 @@ class Application:
             }
         })
 
-    @classmethod
-    async def run(cls) -> None:
+    async def run(self) -> None:
         """Terminate errant processes on all clusters/nodes configured in application settings."""
 
-        if not SETTINGS.clusters:
+        if not self.settings.clusters:
             logging.warning('No cluster names configured in application settings.')
 
-        for cluster in SETTINGS.clusters:
+        for cluster in self.settings.clusters:
             logging.info(f'Starting scan for nodes in cluster {cluster}')
 
-            try:
-                await asyncio.gather(
-                    *[utils.terminate_errant_processes(cluster, node) async for node in utils.get_nodes(cluster)]
-                )
+            # Lunch a concurrent job for each nod in the cluster
+            nodes = utils.get_nodes(cluster, self.settings.ignore_nodes)
+            coroutines = [
+                utils.terminate_errant_processes(
+                    cluster,
+                    node,
+                    self._ssh_limit,
+                    self.settings.uid_whitelist,
+                    self.settings.gid_whitelist,
+                    self.settings.debug)
+                for node in nodes
+            ]
 
-            except Exception as caught:
-                logging.error(f'Error for cluster {cluster}: {caught}')
+            await asyncio.gather(*coroutines, return_exceptions=True)
 
     @classmethod
     def execute(cls, arg_list: List[str] = None) -> None:
         """Parse commandline arguments and execute the application"""
 
-        parser = Parser()
-        args = parser.parse_args(arg_list)
+        args = Parser().parse_args(arg_list)
 
-        # Calculate the numeric logging level for the console.
-        verbosity = 40 - (10 * args.verbose)
+        # Load default settings from the application config file
+        settings = Settings()
+        if SETTINGS_PATH.exists():
+            settings = settings.model_validate(yaml.safe_load(SETTINGS_PATH))
 
-        # Configure the application
-        cls._configure_logging(console_log_level=verbosity)
-        cls._configure_debug(force_debug=args.debug)
+        # Override defaults using parsed arguments
+        verbosity_to_log_level = {0: logging.ERROR, 1: logging.WARNING, 2: logging.INFO, 3: logging.DEBUG}
+        settings.verbosity = verbosity_to_log_level.get(args.verbosity, logging.DEBUG)
+        settings.debug = settings.debug or args.debug
 
         try:
-            asyncio.run(cls.run())
+            application = cls(settings)
+            asyncio.run(application.run())
 
         except Exception as caught:
             logging.getLogger('file_logger').critical('Application crash', exc_info=caught)

@@ -1,36 +1,9 @@
 """Tests for the ``Application`` class."""
 
 import logging
-from pathlib import Path
 from unittest import TestCase
 
 from shinigami.cli import Application
-from shinigami.settings import SETTINGS
-
-
-class DebugEnforcement(TestCase):
-    """Test enabling debug mode from the command line"""
-
-    def test_debug_flag_enabled(self) -> None:
-        """Test the ``debug`` option enables the debug setting"""
-
-        SETTINGS.debug = False
-        Application.execute(['--debug'])
-        self.assertTrue(SETTINGS.debug)
-
-        Application.execute(['--debug'])
-        self.assertTrue(SETTINGS.debug)
-
-    def test_debug_flag_disabled(self) -> None:
-        """Test the debug setting is unchanged when the ``debug`` option is not specified"""
-
-        SETTINGS.debug = False
-        Application.execute([])
-        self.assertFalse(SETTINGS.debug)
-
-        SETTINGS.debug = True
-        Application.execute([])
-        self.assertTrue(SETTINGS.debug)
 
 
 class ConsoleLoggingConfiguration(TestCase):
@@ -44,7 +17,7 @@ class ConsoleLoggingConfiguration(TestCase):
         self.assertIn('console_handler', handler_names)
 
     def test_console_logger_has_stream_handler(self) -> None:
-        """Test console logger has a single ``StreamHandler``"""
+        """Test the ``console`` logger has a single ``StreamHandler``"""
 
         Application.execute(['--debug'])
         handlers = logging.getLogger('console_logger').handlers
@@ -85,7 +58,7 @@ class ConsoleLoggingConfiguration(TestCase):
 
         Application.execute(['-vvvvvvvvvv', '--debug'])
         for handler in logging.getLogger('console_logger').handlers:
-            self.assertLess(handler.level, logging.DEBUG)
+            self.assertEqual(logging.DEBUG, handler.level)
 
 
 class FileLoggingConfiguration(TestCase):
@@ -98,27 +71,11 @@ class FileLoggingConfiguration(TestCase):
         handler_names = [handler.name for handler in logging.getLogger().handlers]
         self.assertIn('log_file_handler', handler_names)
 
-    def test_console_logger_has_file_handler(self) -> None:
-        """Test console logger has a single ``StreamHandler``"""
+    def test_file_logger_has_file_handler(self) -> None:
+        """Test the ``file_logger`` logger has a single ``StreamHandler``"""
 
         Application.execute(['--debug'])
         handlers = logging.getLogger('file_logger').handlers
 
         self.assertEqual(1, len(handlers))
         self.assertIsInstance(handlers[0], logging.FileHandler)
-        self.assertEqual(
-            SETTINGS.log_path,
-            Path(handlers[0].baseFilename),
-            'File handler path des not match application settings')
-
-    def test_verbose_level_matches_settings(self) -> None:
-        """Test the logging level for the log file matches application settings"""
-
-        Application.execute(['--debug'])
-        logger = logging.getLogger('file_logger')
-        self.assertEqual(0, logger.level, 'Logging level should be zero at the logger level')
-
-        for handler in logger.handlers:
-            expected_level = SETTINGS.log_level
-            actual_level = logging.getLevelName(handler.level)
-            self.assertEqual(expected_level, actual_level, 'Handler logging level does no match application settings')

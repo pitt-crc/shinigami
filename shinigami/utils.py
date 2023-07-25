@@ -4,14 +4,9 @@ import asyncio
 import logging
 from shlex import split
 from subprocess import Popen, PIPE
-from typing import Union, Tuple, Collection, AsyncIterable
+from typing import Union, Tuple, Collection
 
 import asyncssh
-
-from .settings import SETTINGS
-
-# Used to limit the number of concurrent SSH connections
-SSH_SEMAPHORE = asyncio.Semaphore(SETTINGS.max_concurrent)
 
 
 def id_in_whitelist(id_value: int, blacklist: Collection[Union[int, Tuple[int, int]]]) -> bool:
@@ -26,48 +21,59 @@ def id_in_whitelist(id_value: int, blacklist: Collection[Union[int, Tuple[int, i
     """
 
     for id_def in blacklist:
-        if isinstance(id_def, int) and id_value == id_def:
+        if hasattr(id_def, '__getitem__') and (id_def[0] <= id_value <= id_def[1]):
             return True
 
-        elif isinstance(id_def, (tuple, list)) and (id_def[0] <= id_value <= id_def[1]):
+        elif isinstance(id_def, int) and id_value == id_def:
             return True
 
     return False
 
 
-async def get_nodes(cluster: str) -> AsyncIterable:
+def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
     """Return a set of nodes included a given Slurm cluster
 
     Args:
         cluster: Name of the cluster to fetch nodes for
+        ignore_substring: Do not return nodes containing any of the given substrings
 
     Returns:
         A set of cluster names
     """
 
+    logging.debug(f'Fetching node list for cluster {cluster}')
     sub_proc = Popen(split(f"sinfo -M {cluster} -N -o %N -h"), stdout=PIPE, stderr=PIPE)
     stdout, stderr = sub_proc.communicate()
+
     if stderr:
         raise RuntimeError(stderr)
 
     all_nodes = stdout.decode().strip().split('\n')
-    for unique_node in set(all_nodes):
-        if any(substring in unique_node for substring in SETTINGS.ignore_nodes):
-            logging.info(f'Skipping node {unique_node} on cluster {cluster}')
-
-        async with SSH_SEMAPHORE:
-            yield unique_node
+    is_valid = lambda node: not any(substring in node for substring in ignore_substring)
+    return set(filter(is_valid, all_nodes))
 
 
-async def terminate_errant_processes(cluster: str, node: str) -> None:
+async def terminate_errant_processes(
+    cluster: str,
+    node: str,
+    ssh_limit: asyncio.Semaphore,
+    uid_whitelist,
+    gid_whitelist,
+    debug: bool = False
+) -> None:
     """Terminate non-slurm processes on a given node
 
     Args:
-        cluster: The name of the cluster
-        node: The name of the node
+        cluster: The Slurm name of the cluster to terminate processes on
+        node: The DNS resolvable name of the node to terminate processes on
+        ssh_limit: Semaphore object used to limit concurrent SSH connections
+        uid_whitelist: Do nt terminate processes owned by the given UID
+        gid_whitelist: Do nt terminate processes owned by the given GID
+        debug: Log which process to terminate but do nt terminate them
     """
 
-    async with asyncssh.connect(node) as conn:
+    logging.debug(f'Waiting to connect to {node}')
+    async with ssh_limit, asyncssh.connect(node) as conn:
 
         # Identify users running valid slurm jobs
         logging.info(f'Scanning for processes on node {node}')
@@ -82,13 +88,13 @@ async def terminate_errant_processes(cluster: str, node: str) -> None:
         for pid, user, uid, gid, cmd in proc_users:
             if not (
                 (user in slurm_users) or
-                id_in_whitelist(int(uid), SETTINGS.uid_whitelist) or
-                id_in_whitelist(int(gid), SETTINGS.gid_whitelist)
+                id_in_whitelist(int(uid), uid_whitelist) or
+                id_in_whitelist(int(gid), gid_whitelist)
             ):
                 logging.debug(f'Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
                 pids_to_kill.append(pid)
 
-        if SETTINGS.debug:
+        if debug:
             return
 
         proc_id_str = ' '.join(pids_to_kill)

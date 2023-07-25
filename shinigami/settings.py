@@ -10,11 +10,8 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Set, Tuple, Union, Literal, Optional
 
-import yaml
 from pydantic import Field
 from pydantic_settings import BaseSettings
-
-_settings_path = Path('/etc/shinigami/settings.yml')
 
 
 class Settings(BaseSettings):
@@ -62,8 +59,7 @@ class Settings(BaseSettings):
         default_factory=lambda: Path(NamedTemporaryFile().name),
         description='Optionally log application events to a file.')
 
-
-# Load application settings from disk
-SETTINGS = Settings()
-if _settings_path.exists():
-    SETTINGS = SETTINGS.model_validate(yaml.safe_load(_settings_path))  # pragma: no cover
+    verbosity: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR'] = Field(
+        title='Default console verbosity',
+        default='ERROR',
+        description='Default verbosity level for console output.')
