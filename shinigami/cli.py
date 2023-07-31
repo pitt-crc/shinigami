@@ -8,12 +8,10 @@ from argparse import ArgumentParser, RawTextHelpFormatter
 from pathlib import Path
 from typing import List
 
-import yaml
-
 from . import __version__, utils
 from .settings import Settings
 
-SETTINGS_PATH = Path('/etc/shinigami/settings.yml')
+SETTINGS_PATH = Path('/etc/shinigami/settings.json')
 
 
 class Parser(ArgumentParser):
@@ -128,7 +126,7 @@ class Application:
         # Load default settings from the application config file
         settings = Settings()
         if SETTINGS_PATH.exists():
-            settings = settings.model_validate(yaml.safe_load(SETTINGS_PATH))
+            settings = settings.model_validate(SETTINGS_PATH.read_text())
 
         # Override defaults using parsed arguments
         verbosity_to_log_level = {0: logging.ERROR, 1: logging.WARNING, 2: logging.INFO, 3: logging.DEBUG}
