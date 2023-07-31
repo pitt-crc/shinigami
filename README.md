@@ -19,7 +19,7 @@ However, you may find a different cadence more appropriate depending on your clu
 Running the utility automatically is accomplished via a simple cron job:
 
 ```cron
-0,30 * * * * /usr/local/sbin/shinigami.py
+0,30 * * * * shinigami
 ```
 
 You may wish to configure the cron job to run under a dedicated service account.
