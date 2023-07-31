@@ -61,7 +61,7 @@ async def terminate_errant_processes(
     gid_whitelist,
     debug: bool = False
 ) -> None:
-    """Terminate non-slurm processes on a given node
+    """Terminate non-Slurm processes on a given node
 
     Args:
         cluster: The Slurm name of the cluster to terminate processes on
@@ -75,7 +75,7 @@ async def terminate_errant_processes(
     logging.debug(f'Waiting to connect to {node}')
     async with ssh_limit, asyncssh.connect(node) as conn:
 
-        # Identify users running valid slurm jobs
+        # Identify users running valid Slurm jobs
         logging.info(f'[{node}] Scanning for processes')
         slurm_users = conn.run(f'squeue -h -M {cluster} -w {node} -o %u').strip().split('\n')
 

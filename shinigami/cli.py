@@ -26,7 +26,7 @@ class Parser(ArgumentParser):
             prog='shinigami',
             formatter_class=RawTextHelpFormatter,  # Allow newlines in description text
             description=(
-                'Scan slurm compute nodes and terminate errant processes.\n\n'
+                'Scan Slurm compute nodes and terminate errant processes.\n\n'
                 f'See {SETTINGS_PATH} for current application settings.'
             ))
 

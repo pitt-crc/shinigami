@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     ignore_nodes: Tuple[str, ...] = Field(
         title='Ignore Nodes',
         default=tuple(),
-        description='Ignore nodes with names containing any of the provided substrings.')
+        description='Ignore nodes with Slurm names containing any of the provided substrings.')
 
     max_concurrent: int = Field(
         title='Maximum SSH Connections',
