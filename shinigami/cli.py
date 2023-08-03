@@ -108,7 +108,8 @@ class Application:
                     ssh_limit,
                     self.settings.uid_whitelist,
                     self.settings.gid_whitelist,
-                    self.settings.debug)
+                    timeout=self.settings.ssh_timeout,
+                    debug=self.settings.debug)
                 for node in nodes
             ]
 

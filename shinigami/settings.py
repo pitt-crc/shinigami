@@ -57,3 +57,8 @@ class Settings(BaseSettings):
         title='Default console verbosity',
         default='ERROR',
         description='Default verbosity level for console output.')
+
+    ssh_timeout: int = Field(
+        title='SSH Timeout',
+        default=120,
+        description='Maximum time in seconds to complete an outbound SSH connection.')
