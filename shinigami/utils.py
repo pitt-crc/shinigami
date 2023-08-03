@@ -9,22 +9,22 @@ from typing import Union, Tuple, Collection
 import asyncssh
 
 
-def id_in_whitelist(id_value: int, blacklist: Collection[Union[int, Tuple[int, int]]]) -> bool:
+def id_in_whitelist(id_value: int, whitelist: Collection[Union[int, Tuple[int, int]]]) -> bool:
     """Return whether an ID is in a list of ID values
 
     Args:
         id_value: The ID value to check
-        blacklist: A collection of ID values and ID ranges
+        whitelist: A collection of ID values and ID ranges
 
     Returns:
-        Whether the ID is in the blacklist
+        Whether the ID is in the whitelist
     """
 
-    for id_def in blacklist:
+    for id_def in whitelist:
         if hasattr(id_def, '__getitem__') and (id_def[0] <= id_value <= id_def[1]):
             return True
 
-        elif isinstance(id_def, int) and id_value == id_def:
+        elif id_value == id_def:
             return True
 
     return False
@@ -58,7 +58,6 @@ async def terminate_errant_processes(
     node: str,
     ssh_limit: asyncio.Semaphore,
     uid_whitelist,
-    gid_whitelist,
     timeout: int = 120,
     debug: bool = False
 ) -> None:
@@ -69,7 +68,6 @@ async def terminate_errant_processes(
         node: The DNS resolvable name of the node to terminate processes on
         ssh_limit: Semaphore object used to limit concurrent SSH connections
         uid_whitelist: Do not terminate processes owned by the given UID
-        gid_whitelist: Do not terminate processes owned by the given GID
         timeout: Maximum time in seconds to complete an outbound SSH connection
         debug: Log which process to terminate but do not terminate them
     """
@@ -92,11 +90,7 @@ async def terminate_errant_processes(
         # Identify which processes to kill
         pids_to_kill = []
         for pid, user, uid, gid, cmd in proc_users:
-            if not (
-                (user in slurm_users) or
-                id_in_whitelist(int(uid), uid_whitelist) or
-                id_in_whitelist(int(gid), gid_whitelist)
-            ):
+            if not ((user in slurm_users) or id_in_whitelist(int(uid), uid_whitelist)):
                 logging.debug(f'[{node}] Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
                 pids_to_kill.append(pid)
 

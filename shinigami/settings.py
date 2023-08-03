@@ -23,11 +23,6 @@ class Settings(BaseSettings):
         default=(0,),
         description='Do not terminate processes launched by users with the given UID values.')
 
-    gid_whitelist: Tuple[Union[int, Tuple[int, int]]] = Field(
-        title='Whitelisted Group IDs',
-        default=(0,),
-        description='Do not terminate processes launched by users with the given GID values.')
-
     clusters: Tuple[str, ...] = Field(
         title='Clusters to Scan',
         default=tuple(),
