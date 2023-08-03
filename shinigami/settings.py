@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Set, Tuple, Union, Literal, Optional
+from typing import Tuple, Union, Literal, Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -18,20 +18,20 @@ class Settings(BaseSettings):
         default=False,
         description='When enabled, processes are scanned and logged but not terminated.')
 
-    uid_whitelist: Set[Union[int, Tuple[int, int]]] = Field(
+    uid_whitelist: Tuple[Union[int, Tuple[int, int]]] = Field(
         title='Whitelisted User IDs',
-        default=[0],
+        default=(0,),
         description='Do not terminate processes launched by users with the given UID values.')
 
-    gid_whitelist: Set[Union[int, Tuple[int, int]]] = Field(
+    gid_whitelist: Tuple[Union[int, Tuple[int, int]]] = Field(
         title='Whitelisted Group IDs',
-        default=[0],
+        default=(0,),
         description='Do not terminate processes launched by users with the given GID values.')
 
     clusters: Tuple[str, ...] = Field(
         title='Clusters to Scan',
         default=tuple(),
-        decription='Scan and terminate processes on the given Slurm clusters.')
+        description='Scan and terminate processes on the given Slurm clusters.')
 
     ignore_nodes: Tuple[str, ...] = Field(
         title='Ignore Nodes',

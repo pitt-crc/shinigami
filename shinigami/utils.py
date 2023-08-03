@@ -31,7 +31,7 @@ def id_in_whitelist(id_value: int, blacklist: Collection[Union[int, Tuple[int, i
 
 
 def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
-    """Return a set of nodes included a given Slurm cluster
+    """Return a set of nodes included in a given Slurm cluster
 
     Args:
         cluster: Name of the cluster to fetch nodes for
@@ -71,7 +71,7 @@ async def terminate_errant_processes(
         uid_whitelist: Do not terminate processes owned by the given UID
         gid_whitelist: Do not terminate processes owned by the given GID
         timeout: Maximum time in seconds to complete an outbound SSH connection
-        debug: Log which process to terminate but do nt terminate them
+        debug: Log which process to terminate but do not terminate them
     """
 
     # Define SSH connection settings
@@ -85,7 +85,7 @@ async def terminate_errant_processes(
         logging.info(f'[{node}] Scanning for processes')
         slurm_users = conn.run(f'squeue -h -M {cluster} -w {node} -o %u').strip().split('\n')
 
-        # Create a list of process info [[pid, user, uid, cmd], ...]
+        # Create a list of process info [[pid, user, uid, gid, cmd], ...]
         ps_output = conn.run('ps --no-heading -eo pid,user,uid,gid,cmd')
         proc_users = [line.split() for line in ps_output.strip().split()]
 

@@ -6,10 +6,10 @@ from shinigami.utils import id_in_whitelist
 
 
 class Whitelisting(TestCase):
-    """Test id values are correctly whitelisted"""
+    """Test ID values are correctly whitelisted"""
 
     def test_empty_whitelist(self) -> None:
-        """Test the return value is ``False`` for all id values when the whitelist is empty"""
+        """Test the return value is ``False`` for all ID values when the whitelist is empty"""
 
         self.assertFalse(id_in_whitelist(0, []))
         self.assertFalse(id_in_whitelist(123, []))
