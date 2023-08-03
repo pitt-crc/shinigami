@@ -59,6 +59,7 @@ async def terminate_errant_processes(
     ssh_limit: asyncio.Semaphore,
     uid_whitelist,
     gid_whitelist,
+    timeout: int = 120,
     debug: bool = False
 ) -> None:
     """Terminate non-Slurm processes on a given node
@@ -69,11 +70,16 @@ async def terminate_errant_processes(
         ssh_limit: Semaphore object used to limit concurrent SSH connections
         uid_whitelist: Do not terminate processes owned by the given UID
         gid_whitelist: Do not terminate processes owned by the given GID
+        timeout: Maximum time in seconds to complete an outbound SSH connection
         debug: Log which process to terminate but do not terminate them
     """
 
+    # Define SSH connection settings
+    ssh_options = asyncssh.SSHClientConnectionOptions(
+        connect_timeout=timeout)
+
     logging.debug(f'Waiting to connect to {node}')
-    async with ssh_limit, asyncssh.connect(node) as conn:
+    async with ssh_limit, asyncssh.connect(node, options=ssh_options) as conn:
 
         # Identify users running valid Slurm jobs
         logging.info(f'[{node}] Scanning for processes')
