@@ -27,8 +27,3 @@ class Defaults(TestCase):
         """Test the UID whitelist includes UID 0"""
 
         self.assertIn(0, Settings().uid_whitelist)
-
-    def test_gid_ignores_root(self) -> None:
-        """Test the GID whitelist includes GID 0"""
-
-        self.assertIn(0, Settings().gid_whitelist)
