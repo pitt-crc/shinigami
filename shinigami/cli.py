@@ -1,4 +1,4 @@
-"""The application commandline interface."""
+"""The application command-line interface."""
 
 import asyncio
 import logging
@@ -15,24 +15,23 @@ SETTINGS_PATH = Path('/etc/shinigami/settings.json')
 
 
 class Parser(ArgumentParser):
-    """Defines the commandline interface and parses commandline arguments"""
+    """Defines the command-line interface and parses command-line arguments"""
 
     def __init__(self) -> None:
-        """Define the commandline interface"""
+        """Define the command-line interface"""
 
         super().__init__(
             prog='shinigami',
             formatter_class=RawTextHelpFormatter,  # Allow newlines in description text
             description=(
                 'Scan Slurm compute nodes and terminate errant processes.\n\n'
-                f'See {SETTINGS_PATH} for current application settings.'
+                f'See {SETTINGS_PATH} for the current application settings.'
             ))
 
         self.add_argument('--version', action='version', version=__version__)
         self.add_argument('--debug', action='store_true', help='force the application to run in debug mode')
-        self.add_argument(
-            '-v', action='count', dest='verbosity', default=0,
-            help='set output verbosity to warning (-v), info (-vv), or debug (-vvv)')
+        self.add_argument('-v', action='count', dest='verbosity', default=0,
+                          help='set output verbosity to warning (-v), info (-vv), or debug (-vvv)')
 
 
 class Application:
@@ -45,16 +44,16 @@ class Application:
             settings: Settings to use when executing the application
         """
 
-        self.settings = settings
+        self._settings = settings
         self._configure_logging()
 
     def _configure_logging(self) -> None:
-        """Configure python logging
+        """Configure Python logging
 
         Configured loggers:
             console_logger: For logging to the console only
-            file_logger: For logging to the lg file only
-            root: For logging to console and the log file
+            file_logger: For logging to the log file only
+            root: For logging to the console and log file
         """
 
         logging.config.dictConfig({
@@ -73,13 +72,13 @@ class Application:
                     'class': 'logging.StreamHandler',
                     'stream': 'ext://sys.stdout',
                     'formatter': 'console_formatter',
-                    'level': self.settings.verbosity
+                    'level': self._settings.verbosity
                 },
                 'log_file_handler': {
                     'class': 'logging.FileHandler',
                     'formatter': 'log_file_formatter',
-                    'level': self.settings.log_level,
-                    'filename': self.settings.log_path
+                    'level': self._settings.log_level,
+                    'filename': self._settings.log_path
                 },
             },
             'loggers': {
@@ -92,23 +91,23 @@ class Application:
     async def run(self) -> None:
         """Terminate errant processes on all clusters/nodes configured in application settings."""
 
-        if not self.settings.clusters:
+        if not self._settings.clusters:
             logging.warning('No cluster names configured in application settings.')
 
-        ssh_limit = asyncio.Semaphore(self.settings.max_concurrent)
-        for cluster in self.settings.clusters:
+        ssh_limit = asyncio.Semaphore(self._settings.max_concurrent)
+        for cluster in self._settings.clusters:
             logging.info(f'Starting scan for nodes in cluster {cluster}')
 
-            # Launch a concurrent job for each nod in the cluster
-            nodes = utils.get_nodes(cluster, self.settings.ignore_nodes)
+            # Launch a concurrent job for each node in the cluster
+            nodes = utils.get_nodes(cluster, self._settings.ignore_nodes)
             coroutines = [
                 utils.terminate_errant_processes(
                     cluster,
                     node,
                     ssh_limit,
-                    self.settings.uid_whitelist,
-                    self.settings.gid_whitelist,
-                    self.settings.debug)
+                    self._settings.uid_whitelist,
+                    self._settings.gid_whitelist,
+                    self._settings.debug)
                 for node in nodes
             ]
 
@@ -119,7 +118,7 @@ class Application:
 
     @classmethod
     def execute(cls, arg_list: List[str] = None) -> None:
-        """Parse commandline arguments and execute the application"""
+        """Parse command-line arguments and execute the application"""
 
         args = Parser().parse_args(arg_list)
 

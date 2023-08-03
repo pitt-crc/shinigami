@@ -25,7 +25,7 @@ class VerboseOption(TestCase):
     """Test the verbosity flag"""
 
     def test_counts_instances(self) -> None:
-        """Test the parse counts the number of provided flags"""
+        """Test the parser counts the number of provided flags"""
 
         parser = Parser()
         self.assertEqual(0, parser.parse_args([]).verbosity)
