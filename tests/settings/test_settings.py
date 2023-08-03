@@ -14,7 +14,7 @@ class Defaults(TestCase):
         Settings()
 
     def test_debug_is_false(self) -> None:
-        """Test the ``debug`` settings defaults to ``False``"""
+        """Test the ``debug`` setting defaults to ``False``"""
 
         self.assertFalse(Settings().debug)
 

@@ -7,7 +7,7 @@ from shinigami.cli import Application
 
 
 class ConsoleLoggingConfiguration(TestCase):
-    """Test the application verbosity is set to match commandline arguments"""
+    """Test the application verbosity is set to match command-line arguments"""
 
     def test_root_logs_to_console(self) -> None:
         """Test the root logger logs to the console"""
@@ -62,7 +62,7 @@ class ConsoleLoggingConfiguration(TestCase):
 
 
 class FileLoggingConfiguration(TestCase):
-    """Test the configuration for logging to file"""
+    """Test the configuration for logging to a file"""
 
     def test_root_logs_to_file(self) -> None:
         """Test the root logger logs to the log file"""

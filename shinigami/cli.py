@@ -1,4 +1,4 @@
-"""The application commandline interface."""
+"""The application command-line interface."""
 
 import asyncio
 import logging
@@ -15,17 +15,17 @@ SETTINGS_PATH = Path('/etc/shinigami/settings.json')
 
 
 class Parser(ArgumentParser):
-    """Defines the commandline interface and parses commandline arguments"""
+    """Defines the command-line interface and parses command-line arguments"""
 
     def __init__(self) -> None:
-        """Define the commandline interface"""
+        """Define the command-line interface"""
 
         super().__init__(
             prog='shinigami',
             formatter_class=RawTextHelpFormatter,  # Allow newlines in description text
             description=(
                 'Scan Slurm compute nodes and terminate errant processes.\n\n'
-                f'See {SETTINGS_PATH} for current application settings.'
+                f'See {SETTINGS_PATH} for the current application settings.'
             ))
 
         self.add_argument('--version', action='version', version=__version__)
@@ -48,7 +48,7 @@ class Application:
         self._configure_logging()
 
     def _configure_logging(self) -> None:
-        """Configure python logging
+        """Configure Python logging
 
         Configured loggers:
             console_logger: For logging to the console only
@@ -98,7 +98,7 @@ class Application:
         for cluster in self._settings.clusters:
             logging.info(f'Starting scan for nodes in cluster {cluster}')
 
-            # Launch a concurrent job for each nod in the cluster
+            # Launch a concurrent job for each node in the cluster
             nodes = utils.get_nodes(cluster, self._settings.ignore_nodes)
             coroutines = [
                 utils.terminate_errant_processes(
@@ -118,7 +118,7 @@ class Application:
 
     @classmethod
     def execute(cls, arg_list: List[str] = None) -> None:
-        """Parse commandline arguments and execute the application"""
+        """Parse command-line arguments and execute the application"""
 
         args = Parser().parse_args(arg_list)
 

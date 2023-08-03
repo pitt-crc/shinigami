@@ -1,4 +1,4 @@
-"""Shinigami is a commandline application for killing errant processes
+"""Shinigami is a command-line application for killing errant processes
 on Slurm based compute nodes. The application scans for and terminates any
 running processes not associated with a currently running Slurm job.
 
