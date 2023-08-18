@@ -9,6 +9,8 @@ from typing import Tuple, Union, Literal, Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
+SETTINGS_PATH = Path('/etc/shinigami/settings.json')
+
 
 class Settings(BaseSettings):
     """Defines the settings schema and default settings values"""
@@ -57,3 +59,21 @@ class Settings(BaseSettings):
         title='SSH Timeout',
         default=120,
         description='Maximum time in seconds to complete an outbound SSH connection.')
+
+    @classmethod
+    def load(cls, path: Path = SETTINGS_PATH) -> Settings:
+        """Factory method for loading application settings from disk
+
+        If a settings file does not exist, return default settings values.
+
+        Args:
+            path: The settings file to read
+
+        Returns:
+            An instance of the parent class
+        """
+
+        if path.exists():
+            return cls.model_validate(path.read_text())
+
+        return cls()  # Returns default settings

@@ -4,14 +4,11 @@ import asyncio
 import logging
 import logging.config
 import logging.handlers
-from argparse import ArgumentParser, RawTextHelpFormatter
-from pathlib import Path
+from argparse import RawTextHelpFormatter, ArgumentParser
 from typing import List
 
 from . import __version__, utils
-from .settings import Settings
-
-SETTINGS_PATH = Path('/etc/shinigami/settings.json')
+from .settings import Settings, SETTINGS_PATH
 
 
 class Parser(ArgumentParser):
@@ -41,7 +38,7 @@ class Application:
         """Instantiate a new instance of the application
 
         Args:
-            settings: Settings to use when executing the application
+            settings: Settings to use when configuring and executing the application
         """
 
         self._settings = settings
@@ -111,6 +108,7 @@ class Application:
                 for node in nodes
             ]
 
+            # Gather results from each concurrent run and check for errors
             results = await asyncio.gather(*coroutines, return_exceptions=True)
             for node, result in zip(nodes, results):
                 if isinstance(result, Exception):
@@ -121,14 +119,10 @@ class Application:
         """Parse command-line arguments and execute the application"""
 
         args = Parser().parse_args(arg_list)
-
-        # Load default settings from the application config file
-        settings = Settings()
-        if SETTINGS_PATH.exists():
-            settings = settings.model_validate(SETTINGS_PATH.read_text())
-
-        # Override defaults using parsed arguments
         verbosity_to_log_level = {0: logging.ERROR, 1: logging.WARNING, 2: logging.INFO, 3: logging.DEBUG}
+
+        # Load application settings - override defaults using parsed arguments
+        settings = Settings.load()
         settings.verbosity = verbosity_to_log_level.get(args.verbosity, logging.DEBUG)
         settings.debug = settings.debug or args.debug
 
