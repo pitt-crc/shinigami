@@ -1,28 +1,29 @@
 """The application command-line interface."""
 
-import argparse
 import asyncio
 import logging
 import logging.config
 import logging.handlers
+from argparse import RawTextHelpFormatter, ArgumentParser
 from typing import List
 
 from . import __version__, utils
 from .settings import Settings, SETTINGS_PATH
 
 
-class Parser(argparse.ArgumentParser):
+class Parser(ArgumentParser):
     """Defines the command-line interface and parses command-line arguments"""
 
     def __init__(self) -> None:
         """Define the command-line interface"""
 
-        app_description = (
-            'Scan Slurm compute nodes and terminate errant processes.\n\n'
-            f'See {SETTINGS_PATH} for the current application settings.'
-        )
-
-        super().__init__(prog='shinigami', description=app_description, formatter_class=argparse.RawTextHelpFormatter)
+        super().__init__(
+            prog='shinigami',
+            formatter_class=RawTextHelpFormatter,  # Allow newlines in description text
+            description=(
+                'Scan Slurm compute nodes and terminate errant processes.\n\n'
+                f'See {SETTINGS_PATH} for the current application settings.'
+            ))
 
         self.add_argument('--version', action='version', version=__version__)
         self.add_argument('--debug', action='store_true', help='force the application to run in debug mode')
