@@ -69,13 +69,11 @@ class Settings(BaseSettings):
     def load(cls, path: Path = SETTINGS_PATH) -> Settings:
         """Factory method for loading application settings from disk
 
-        If a settings file does not exist, return default settings values.
+        Args:
+            path: Settings file to read
 
         Returns:
             An instance of the parent class
         """
 
-        if path.exists():
-            return cls.model_validate(path.read_text())
-
-        return cls()  # Returns default settings
+        return cls.model_validate(path.read_text())
