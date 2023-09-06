@@ -2,11 +2,13 @@
 
 import asyncio
 import logging
+from io import StringIO
 from shlex import split
 from subprocess import Popen, PIPE
 from typing import Union, Tuple, Collection
 
 import asyncssh
+import pandas as pd
 
 
 def id_in_whitelist(id_value: int, whitelist: Collection[Union[int, Tuple[int, int]]]) -> bool:
@@ -54,7 +56,6 @@ def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
 
 
 async def terminate_errant_processes(
-    cluster: str,
     node: str,
     ssh_limit: asyncio.Semaphore,
     uid_whitelist,
@@ -64,7 +65,6 @@ async def terminate_errant_processes(
     """Terminate non-Slurm processes on a given node
 
     Args:
-        cluster: The Slurm name of the cluster to terminate processes on
         node: The DNS resolvable name of the node to terminate processes on
         ssh_limit: Semaphore object used to limit concurrent SSH connections
         uid_whitelist: Do not terminate processes owned by the given UID
@@ -73,33 +73,24 @@ async def terminate_errant_processes(
     """
 
     # Define SSH connection settings
-    ssh_options = asyncssh.SSHClientConnectionOptions(
-        connect_timeout=timeout)
+    ssh_options = asyncssh.SSHClientConnectionOptions(connect_timeout=timeout)
 
     logging.debug(f'Waiting to connect to {node}')
     async with ssh_limit, asyncssh.connect(node, options=ssh_options) as conn:
 
-        # Identify users running valid Slurm jobs
         logging.info(f'[{node}] Scanning for processes')
-        slurm_users = conn.run(f'squeue -h -M {cluster} -w {node} -o %u').strip().split('\n')
+        ps_data = conn.run('ps -eo pid,ppid,uid,cmd', check=True)
+        process_df = pd.read_fwf(StringIO(ps_data), usecols=[0, 1, 2, 3])
 
-        # Create a list of process info [[pid, user, uid, gid, cmd], ...]
-        ps_output = conn.run('ps --no-heading -eo pid,user,uid,gid,cmd')
-        proc_users = [line.split() for line in ps_output.strip().split()]
-
-        # Identify which processes to kill
-        pids_to_kill = []
-        for pid, user, uid, gid, cmd in proc_users:
-            if not ((user in slurm_users) or id_in_whitelist(int(uid), uid_whitelist)):
-                logging.debug(f'[{node}] Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
-                pids_to_kill.append(pid)
+        # Identify orphaned processes and filter them by the UID whitelist
+        orphaned = process_df[process_df.PPID == 1]
+        terminate = orphaned[orphaned['UID'].apply(id_in_whitelist, whitelist=uid_whitelist)]
+        for _, row in terminate.iterrows():
+            logging.debug(f'[{node}] Marking for termination {dict(row)}')
 
         if debug:
             return
 
-        proc_id_str = ' '.join(pids_to_kill)
+        proc_id_str = ' '.join(terminate.PID)
         logging.info(f"[{node}] Sending termination signal for processes {proc_id_str}")
-
-        result = await conn.run(f"kill -9 {proc_id_str}")
-        if result.stderr:
-            logging.error(f'[{node}] STDERR when killing processes: "{result.stderr}"')
+        await conn.run(f"kill -9 {proc_id_str}", check=True)

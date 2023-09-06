@@ -25,10 +25,11 @@ classifiers = [
 shinigami = "shinigami.cli:Application.execute"
 
 [tool.poetry.dependencies]
-python = ">=3.8"
+python = ">=3.9"
 pydantic = "^2.0.3"
 pydantic-settings = "^2.0.2"
 asyncssh = {extras = ["bcrypt", "fido2"], version = "^2.13.2"}
+pandas = "^2.1.0"
 
 [tool.poetry.group.tests]
 optional = true
