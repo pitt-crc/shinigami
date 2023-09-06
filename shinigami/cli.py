@@ -99,10 +99,9 @@ class Application:
             nodes = utils.get_nodes(cluster, self._settings.ignore_nodes)
             coroutines = [
                 utils.terminate_errant_processes(
-                    cluster,
-                    node,
-                    ssh_limit,
-                    self._settings.uid_whitelist,
+                    node=node,
+                    ssh_limit=ssh_limit,
+                    uid_blacklist=self._settings.uid_blacklist,
                     timeout=self._settings.ssh_timeout,
                     debug=self._settings.debug)
                 for node in nodes
