@@ -79,7 +79,7 @@ async def terminate_errant_processes(
     async with ssh_limit, asyncssh.connect(node, options=ssh_options) as conn:
 
         logging.info(f'[{node}] Scanning for processes')
-        ps_data = conn.run('ps -eo pid,ppid,uid,cmd', check=True)
+        ps_data = conn.run('ps -eo pid,pgid,uid,cmd', check=True)
         process_df = pd.read_fwf(StringIO(ps_data), usecols=[0, 1, 2, 3])
 
         # Identify orphaned processes and filter them by the UID blacklist
@@ -91,6 +91,6 @@ async def terminate_errant_processes(
         if debug:
             return
 
-        proc_id_str = ' '.join(terminate.PID)
+        proc_id_str = ' '.join(terminate.PGID)
         logging.info(f"[{node}] Sending termination signal for processes {proc_id_str}")
-        await conn.run(f"kill -9 {proc_id_str}", check=True)
+        await conn.run(f"pkill --signal -9 --pgroup {proc_id_str}", check=True)
