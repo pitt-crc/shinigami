@@ -2,25 +2,27 @@
 
 import asyncio
 import logging
+from io import StringIO
 from shlex import split
 from subprocess import Popen, PIPE
 from typing import Union, Tuple, Collection
 
 import asyncssh
+import pandas as pd
 
 
-def id_in_whitelist(id_value: int, whitelist: Collection[Union[int, Tuple[int, int]]]) -> bool:
+def id_in_blacklist(id_value: int, blacklist: Collection[Union[int, Tuple[int, int]]]) -> bool:
     """Return whether an ID is in a list of ID values
 
     Args:
         id_value: The ID value to check
-        whitelist: A collection of ID values and ID ranges
+        blacklist: A collection of ID values and ID ranges
 
     Returns:
-        Whether the ID is in the whitelist
+        Whether the ID is in the blacklist
     """
 
-    for id_def in whitelist:
+    for id_def in blacklist:
         if hasattr(id_def, '__getitem__') and (id_def[0] <= id_value <= id_def[1]):
             return True
 
@@ -54,52 +56,42 @@ def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
 
 
 async def terminate_errant_processes(
-    cluster: str,
     node: str,
     ssh_limit: asyncio.Semaphore,
-    uid_whitelist,
+    uid_blacklist,
     timeout: int = 120,
     debug: bool = False
 ) -> None:
     """Terminate non-Slurm processes on a given node
 
     Args:
-        cluster: The Slurm name of the cluster to terminate processes on
         node: The DNS resolvable name of the node to terminate processes on
         ssh_limit: Semaphore object used to limit concurrent SSH connections
-        uid_whitelist: Do not terminate processes owned by the given UID
+        uid_blacklist: Do not terminate processes owned by the given UID
         timeout: Maximum time in seconds to complete an outbound SSH connection
         debug: Log which process to terminate but do not terminate them
     """
 
     # Define SSH connection settings
-    ssh_options = asyncssh.SSHClientConnectionOptions(
-        connect_timeout=timeout)
+    ssh_options = asyncssh.SSHClientConnectionOptions(connect_timeout=timeout)
 
     logging.debug(f'Waiting to connect to {node}')
     async with ssh_limit, asyncssh.connect(node, options=ssh_options) as conn:
 
-        # Identify users running valid Slurm jobs
+        # Fetch running process data from the remote machine
         logging.info(f'[{node}] Scanning for processes')
-        slurm_users = conn.run(f'squeue -h -M {cluster} -w {node} -o %u').strip().split('\n')
+        ps_data = await conn.run('ps -eo pid,pgid,uid', check=True)
+        process_df = pd.read_fwf(StringIO(ps_data.stdout))
 
-        # Create a list of process info [[pid, user, uid, gid, cmd], ...]
-        ps_output = conn.run('ps --no-heading -eo pid,user,uid,gid,cmd')
-        proc_users = [line.split() for line in ps_output.strip().split()]
-
-        # Identify which processes to kill
-        pids_to_kill = []
-        for pid, user, uid, gid, cmd in proc_users:
-            if not ((user in slurm_users) or id_in_whitelist(int(uid), uid_whitelist)):
-                logging.debug(f'[{node}] Marking process for termination user={user}, uid={uid}, pid={pid}, cmd={cmd}')
-                pids_to_kill.append(pid)
+        # Identify orphaned processes and filter them by the UID blacklist
+        orphaned = process_df[process_df.PPID == 1]
+        terminate = orphaned[orphaned['UID'].apply(id_in_blacklist, blacklist=uid_blacklist)]
+        for _, row in terminate.iterrows():
+            logging.debug(f'[{node}] Marking for termination {dict(row)}')
 
         if debug:
             return
 
-        proc_id_str = ' '.join(pids_to_kill)
-        logging.info(f"[{node}] Sending termination signal for processes {proc_id_str}")
-
-        result = await conn.run(f"kill -9 {proc_id_str}")
-        if result.stderr:
-            logging.error(f'[{node}] STDERR when killing processes: "{result.stderr}"')
+        proc_id_str = ' '.join(terminate.PGID)
+        logging.info(f"[{node}] Sending termination signal for process groups {proc_id_str}")
+        await conn.run(f"pkill --signal -9 --pgroup {proc_id_str}", check=True)

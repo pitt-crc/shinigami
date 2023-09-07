@@ -20,10 +20,10 @@ class Settings(BaseSettings):
         default=False,
         description='When enabled, processes are scanned and logged but not terminated.')
 
-    uid_whitelist: Tuple[Union[int, Tuple[int, int]]] = Field(
-        title='Whitelisted User IDs',
+    uid_blacklist: Tuple[Union[int, Tuple[int, int]]] = Field(
+        title='Blacklisted User IDs',
         default=(0,),
-        description='Do not terminate processes launched by users with the given UID values.')
+        description='Only terminate processes launched by users with the given UID values.')
 
     clusters: Tuple[str, ...] = Field(
         title='Clusters to Scan',

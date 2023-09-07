@@ -22,8 +22,3 @@ class Defaults(TestCase):
         """Test the ``ignore_nodes`` setting is empty"""
 
         self.assertEqual(tuple(), Settings().ignore_nodes)
-
-    def test_uid_ignores_root(self) -> None:
-        """Test the UID whitelist includes UID 0"""
-
-        self.assertIn(0, Settings().uid_whitelist)
