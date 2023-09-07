@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from typing import Tuple, Union, Literal, Optional
 
 from pydantic import Field
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
 
     log_path: Optional[Path] = Field(
         title='Log Path',
-        default_factory=lambda: Path(NamedTemporaryFile().name),
+        default_factory=lambda: Path('/tmp/shinigami.log'),
         description='Optionally log application events to a file.')
 
     verbosity: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR'] = Field(
@@ -74,6 +74,6 @@ class Settings(BaseSettings):
         """
 
         if path.exists():
-            return cls.model_validate(path.read_text())
+            return cls.model_validate(json.loads(path.read_text()))
 
         return cls()  # Returns default settings
