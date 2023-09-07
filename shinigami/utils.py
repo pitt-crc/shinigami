@@ -93,5 +93,5 @@ async def terminate_errant_processes(
             return
 
         proc_id_str = ' '.join(terminate.PGID)
-        logging.info(f"[{node}] Sending termination signal for processes {proc_id_str}")
+        logging.info(f"[{node}] Sending termination signal for process groups {proc_id_str}")
         await conn.run(f"pkill --signal -9 --pgroup {proc_id_str}", check=True)
