@@ -78,9 +78,10 @@ async def terminate_errant_processes(
     logging.debug(f'Waiting to connect to {node}')
     async with ssh_limit, asyncssh.connect(node, options=ssh_options) as conn:
 
+        # Fetch running process data from the remote machine
         logging.info(f'[{node}] Scanning for processes')
-        ps_data = conn.run('ps -eo pid,pgid,uid,cmd', check=True)
-        process_df = pd.read_fwf(StringIO(ps_data), usecols=[0, 1, 2, 3])
+        ps_data = await conn.run('ps -eo pid,pgid,uid', check=True)
+        process_df = pd.read_fwf(StringIO(ps_data.stdout))
 
         # Identify orphaned processes and filter them by the UID blacklist
         orphaned = process_df[process_df.PPID == 1]
