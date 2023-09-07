@@ -1,4 +1,5 @@
 """Tests for the ``settings.Settings`` class"""
+
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from unittest import TestCase
