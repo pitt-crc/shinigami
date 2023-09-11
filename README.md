@@ -11,7 +11,7 @@ Processes associated with whitelisted users (root, administrators, service accou
 The `shinigami` command line utility is installable via the pip (or pipx) package manager:
 
 ```bash
-pipx install shinigami
+pipx install crc-shinigami
 ```
 
 To be of maximal use, it is recommended to run the utility every half hour.
