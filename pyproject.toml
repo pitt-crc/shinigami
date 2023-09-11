@@ -4,6 +4,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "crc-shinigami"
+packages = [
+    { include = "shinigami" },
+]
 version = "0.0.0"  # Version is set dynamically by the CI tool on publication
 authors = ["Pitt Center for Research Computing"]
 readme = "README.md"
