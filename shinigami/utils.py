@@ -75,7 +75,7 @@ async def terminate_errant_processes(
     # Define SSH connection settings
     ssh_options = asyncssh.SSHClientConnectionOptions(connect_timeout=timeout)
 
-    logging.debug(f'Waiting to connect to {node}')
+    logging.debug(f'[{node}] Connecting to node')
     async with ssh_limit, asyncssh.connect(node, options=ssh_options) as conn:
 
         # Fetch running process data from the remote machine
@@ -85,9 +85,13 @@ async def terminate_errant_processes(
 
         # Identify orphaned processes and filter them by the UID blacklist
         orphaned = process_df[process_df.PPID == 1]
-        terminate = orphaned[orphaned['UID'].apply(id_in_blacklist, blacklist=uid_blacklist)]
+        terminate: pd.DataFrame = orphaned[orphaned['UID'].apply(id_in_blacklist, blacklist=uid_blacklist)]
         for _, row in terminate.iterrows():
             logging.debug(f'[{node}] Marking for termination {dict(row)}')
+
+        if terminate.empty:
+            logging.info(f'[{node}] No orphaned processes found')
+            return
 
         if debug:
             return
