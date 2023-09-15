@@ -90,7 +90,7 @@ async def terminate_errant_processes(
             logging.debug(f'[{node}] Marking for termination {dict(row)}')
 
         if terminate.empty:
-            logging.info(f'[{node}] No orphaned processes found')
+            logging.debug(f'[{node}] No orphaned processes found')
             return
 
         if debug:
