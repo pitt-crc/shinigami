@@ -36,3 +36,15 @@ jobs:
       uses: github/codeql-action/analyze@v2
       with:
         category: /language:${{matrix.language}}
+
+
+  # Use this job for branch protection rules
+  report-codeql-status:
+    name: Report CodeQL Status
+    if: always()
+    needs: analyze
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check build status
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
