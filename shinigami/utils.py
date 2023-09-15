@@ -80,7 +80,7 @@ async def terminate_errant_processes(
 
         # Fetch running process data from the remote machine
         logging.info(f'[{node}] Scanning for processes')
-        ps_data = await conn.run('ps -eo pid,pgid,uid', check=True)
+        ps_data = await conn.run('ps -eo pid,ppid,pgid,uid', check=True)
         process_df = pd.read_fwf(StringIO(ps_data.stdout))
 
         # Identify orphaned processes and filter them by the UID blacklist
@@ -92,6 +92,6 @@ async def terminate_errant_processes(
         if debug:
             return
 
-        proc_id_str = ' '.join(terminate.PGID)
+        proc_id_str = ' '.join(terminate.PGID.astype(str))
         logging.info(f"[{node}] Sending termination signal for process groups {proc_id_str}")
         await conn.run(f"pkill --signal -9 --pgroup {proc_id_str}", check=True)
