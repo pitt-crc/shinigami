@@ -85,7 +85,7 @@ async def terminate_errant_processes(
 
         # Identify orphaned processes and filter them by the UID blacklist
         orphaned = process_df[process_df.PPID == 1]
-        terminate: pd.DataFrame = orphaned[orphaned['UID'].apply(id_in_blacklist, blacklist=uid_blacklist)]
+        terminate = orphaned[orphaned['UID'].apply(id_in_blacklist, blacklist=uid_blacklist)]
         for _, row in terminate.iterrows():
             logging.debug(f'[{node}] Marking for termination {dict(row)}')
 
