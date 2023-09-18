@@ -86,8 +86,6 @@ async def terminate_errant_processes(
         # Identify orphaned processes and filter them by the UID blacklist
         orphaned = process_df[process_df.PPID == 1]
         terminate = orphaned[orphaned['UID'].apply(id_in_blacklist, blacklist=uid_blacklist)]
-        with open('/home/djperrefort/Github/pitt-crc/shinigami/ps.txt', 'w') as out:
-            out.write(ps_data.stdout)
 
         for _, row in terminate.iterrows():
             logging.debug(f'[{node}] Marking for termination {dict(row)}')
