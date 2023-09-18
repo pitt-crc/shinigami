@@ -75,7 +75,7 @@ async def terminate_errant_processes(
     # Define SSH connection settings
     ssh_options = asyncssh.SSHClientConnectionOptions(connect_timeout=timeout)
 
-    logging.debug(f'[{node}] Connecting to node')
+    logging.debug(f'[{node}] Waiting for SSH pool')
     async with ssh_limit, asyncssh.connect(node, options=ssh_options) as conn:
 
         # Fetch running process data from the remote machine
