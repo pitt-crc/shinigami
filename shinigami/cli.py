@@ -5,6 +5,7 @@ import logging
 import logging.config
 import logging.handlers
 from argparse import RawTextHelpFormatter, ArgumentParser
+from time import sleep
 from typing import List
 
 from . import __version__, utils
@@ -128,6 +129,9 @@ class Application:
         try:
             application = cls(settings)
             asyncio.run(application.run())
+
+        except KeyboardInterrupt:
+            pass
 
         except Exception as caught:
             logging.getLogger('file_logger').critical('Application crash', exc_info=caught)
