@@ -5,7 +5,6 @@ import logging
 import logging.config
 import logging.handlers
 from argparse import RawTextHelpFormatter, ArgumentParser
-from time import sleep
 from typing import List
 
 from . import __version__, utils
