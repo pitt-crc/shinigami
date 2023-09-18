@@ -129,6 +129,9 @@ class Application:
             application = cls(settings)
             asyncio.run(application.run())
 
+        except KeyboardInterrupt:
+            pass
+
         except Exception as caught:
             logging.getLogger('file_logger').critical('Application crash', exc_info=caught)
             logging.getLogger('console_logger').critical(str(caught))
