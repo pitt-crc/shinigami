@@ -80,23 +80,28 @@ async def terminate_errant_processes(
 
         # Fetch running process data from the remote machine
         logging.info(f'[{node}] Scanning for processes')
-        ps_data = await conn.run('ps -eo pid,ppid,pgid,uid', check=True)
-        process_df = pd.read_csv(StringIO(ps_data.stdout), sep=r'\s+')
+        ps_data = (await conn.run('ps -eo pid,ppid,pgid,uid,cmd', check=True)).stdout
+
+        # Parse returned data by determining the width of each column
+        # Assume columns are right justified and align with the header
+        widths = []
+        header = ps_data.split('\n')[0]
+        for col in header.split():
+            widths.append(header.index(col) + len(col) - sum(widths))
+
+        widths[-1] = 500  # The last column is left justified so add some extra width
+        process_df = pd.read_fwf(StringIO(ps_data), widths=widths)
 
         # Identify orphaned processes and filter them by the UID blacklist
         orphaned = process_df[process_df.PPID == 1]
         terminate = orphaned[orphaned['UID'].apply(id_in_blacklist, blacklist=uid_blacklist)]
-
         for _, row in terminate.iterrows():
             logging.debug(f'[{node}] Marking for termination {dict(row)}')
 
         if terminate.empty:
             logging.debug(f'[{node}] No orphaned processes found')
-            return
 
-        if debug:
-            return
-
-        proc_id_str = ' '.join(terminate.PGID.astype(str))
-        logging.info(f"[{node}] Sending termination signal for process groups {proc_id_str}")
-        await conn.run(f"pkill --signal -9 --pgroup {proc_id_str}", check=True)
+        elif not debug:
+            proc_id_str = ' '.join(terminate.PGID.astype(str))
+            logging.info(f"[{node}] Sending termination signal for process groups {proc_id_str}")
+            await conn.run(f"pkill --signal -9 --pgroup {proc_id_str}", check=True)
