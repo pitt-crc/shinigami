@@ -46,7 +46,6 @@ def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
     logging.debug(f'Fetching node list for cluster {cluster}')
     sub_proc = Popen(split(f"sinfo -M {cluster} -N -o %N -h"), stdout=PIPE, stderr=PIPE)
     stdout, stderr = sub_proc.communicate()
-
     if stderr:
         raise RuntimeError(stderr)
 
@@ -77,11 +76,12 @@ async def terminate_errant_processes(
 
     logging.debug(f'[{node}] Waiting for SSH pool')
     async with ssh_limit, asyncssh.connect(node, options=ssh_options) as conn:
+        logging.info(f'[{node}] Scanning for processes')
 
         # Fetch running process data from the remote machine
-        logging.info(f'[{node}] Scanning for processes')
-        ps_data = (await conn.run('ps -eo pid:10,ppid:10,pgid:10,uid:10,cmd:500', check=True)).stdout
-        process_df = pd.read_fwf(StringIO(ps_data), widths=[10, 10, 10, 10, 500])
+        # Add 1 to column widths when parsing ps output to account for space between columns
+        ps_return = await conn.run('ps -eo pid:10,ppid:10,pgid:10,uid:10,cmd:500', check=True)
+        process_df = pd.read_fwf(StringIO(ps_return.stdout), widths=[11, 11, 11, 11, 500])
 
         # Identify orphaned processes and filter them by the UID blacklist
         orphaned = process_df[process_df.PPID == 1]
@@ -89,10 +89,7 @@ async def terminate_errant_processes(
         for _, row in terminate.iterrows():
             logging.debug(f'[{node}] Marking for termination {dict(row)}')
 
-        if terminate.empty:
-            logging.debug(f'[{node}] No orphaned processes found')
-
-        elif not debug:
-            proc_id_str = ' '.join(terminate.PGID.astype(str))
+        if not debug:
+            proc_id_str = ','.join(terminate.PGID.astype(str))
             logging.info(f"[{node}] Sending termination signal for process groups {proc_id_str}")
             await conn.run(f"pkill --signal -9 --pgroup {proc_id_str}", check=True)
