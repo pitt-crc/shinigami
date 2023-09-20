@@ -80,17 +80,8 @@ async def terminate_errant_processes(
 
         # Fetch running process data from the remote machine
         logging.info(f'[{node}] Scanning for processes')
-        ps_data = (await conn.run('ps -eo pid,ppid,pgid,uid,cmd', check=True)).stdout
-
-        # Parse returned data by determining the width of each column
-        # Assume columns are right justified and align with the header
-        widths = []
-        header = ps_data.split('\n')[0]
-        for col in header.split():
-            widths.append(header.index(col) + len(col) - sum(widths))
-
-        widths[-1] = 500  # The last column is left justified so add some extra width
-        process_df = pd.read_fwf(StringIO(ps_data), widths=widths)
+        ps_data = (await conn.run('ps -eo pid:10,ppid:10,pgid:10,uid:10,cmd:500', check=True)).stdout
+        process_df = pd.read_fwf(StringIO(ps_data), widths=[10, 10, 10, 10, 500])
 
         # Identify orphaned processes and filter them by the UID blacklist
         orphaned = process_df[process_df.PPID == 1]
