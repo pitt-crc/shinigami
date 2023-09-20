@@ -101,7 +101,7 @@ class Application:
                 utils.terminate_errant_processes(
                     node=node,
                     ssh_limit=ssh_limit,
-                    uid_blacklist=self._settings.uid_blacklist,
+                    uid_whitelist=self._settings.uid_whitelist,
                     timeout=self._settings.ssh_timeout,
                     debug=self._settings.debug)
                 for node in nodes

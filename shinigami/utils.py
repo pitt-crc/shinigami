@@ -11,18 +11,18 @@ import asyncssh
 import pandas as pd
 
 
-def id_in_blacklist(id_value: int, blacklist: Collection[Union[int, Tuple[int, int]]]) -> bool:
+def id_in_whitelist(id_value: int, whitelist: Collection[Union[int, Tuple[int, int]]]) -> bool:
     """Return whether an ID is in a list of ID values
 
     Args:
         id_value: The ID value to check
-        blacklist: A collection of ID values and ID ranges
+        whitelist: A collection of ID values and ID ranges
 
     Returns:
-        Whether the ID is in the blacklist
+        Whether the ID is in the whitelist
     """
 
-    for id_def in blacklist:
+    for id_def in whitelist:
         if hasattr(id_def, '__getitem__') and (id_def[0] <= id_value <= id_def[1]):
             return True
 
@@ -58,7 +58,7 @@ def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
 async def terminate_errant_processes(
     node: str,
     ssh_limit: asyncio.Semaphore,
-    uid_blacklist,
+    uid_whitelist,
     timeout: int = 120,
     debug: bool = False
 ) -> None:
@@ -67,7 +67,7 @@ async def terminate_errant_processes(
     Args:
         node: The DNS resolvable name of the node to terminate processes on
         ssh_limit: Semaphore object used to limit concurrent SSH connections
-        uid_blacklist: Do not terminate processes owned by the given UID
+        uid_whitelist: Do not terminate processes owned by the given UID
         timeout: Maximum time in seconds to complete an outbound SSH connection
         debug: Log which process to terminate but do not terminate them
     """
@@ -92,9 +92,9 @@ async def terminate_errant_processes(
         widths[-1] = 500  # The last column is left justified so add some extra width
         process_df = pd.read_fwf(StringIO(ps_data), widths=widths)
 
-        # Identify orphaned processes and filter them by the UID blacklist
+        # Identify orphaned processes and filter them by the UID whitelist
         orphaned = process_df[process_df.PPID == 1]
-        terminate = orphaned[orphaned['UID'].apply(id_in_blacklist, blacklist=uid_blacklist)]
+        terminate = orphaned[orphaned['UID'].apply(id_in_whitelist, whitelist=uid_whitelist)]
         for _, row in terminate.iterrows():
             logging.debug(f'[{node}] Marking for termination {dict(row)}')
 
