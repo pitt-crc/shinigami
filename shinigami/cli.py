@@ -4,13 +4,32 @@ import asyncio
 import logging
 import logging.config
 import logging.handlers
+import sys
 from argparse import ArgumentParser
 from typing import List
 
 from . import __version__, utils
 
 
-class Parser(ArgumentParser):
+class BaseParser(ArgumentParser):
+    """Custom argument parser that prints help text on error"""
+
+    def error(self, message: str) -> None:
+        """Prints a usage message and exit
+
+        Args:
+            message: The usage message
+        """
+
+        if len(sys.argv) <= 2:
+            self.print_help()
+            super().exit(1)
+
+        else:
+            super().error(message)
+
+
+class Parser(BaseParser):
     """Defines the command-line interface and parses command-line arguments"""
 
     def __init__(self) -> None:
@@ -18,7 +37,7 @@ class Parser(ArgumentParser):
 
         # Configure the top level parser
         super().__init__(prog='shinigami', description='Scan Slurm compute nodes and terminate orphan processes.')
-        subparsers = self.add_subparsers(dest='func', required=True, parser_class=ArgumentParser)
+        subparsers = self.add_subparsers(required=True, parser_class=BaseParser)
         self.add_argument('--version', action='version', version=__version__)
 
         # This parser defines reusable arguments and is not exposed to the user.
@@ -31,18 +50,18 @@ class Parser(ArgumentParser):
         # Subparser for the `Application.scan` method
         scan = subparsers.add_parser('scan', parents=[common], help='terminate processes on one or more clusters')
         scan.set_defaults(callable=Application.scan)
-        scan.add_argument('-c', '--clusters', nargs='+', type=str, help='cluster names to scan')
-        scan.add_argument('-u', '--uid-whitelist', nargs='+', type=int, help='whitelisted user IDs')
-        scan.add_argument('-i', '--ignore-nodes', nargs='+', type=str, help='ignore given nodes')
+        scan.add_argument('-c', '--clusters', nargs='+', required=True, help='cluster names to scan')
+        scan.add_argument('-u', '--uid-whitelist', nargs='+', required=True, help='whitelisted user IDs')
+        scan.add_argument('-i', '--ignore-nodes', nargs='*', help='ignore given nodes')
         scan.add_argument('-m', '--max-concurrent', type=int, help='maximum SSH connections')
         scan.add_argument('-t', '--ssh-timeout', type=int, help='SSH Timeout')
 
         # Subparser for the `Application.terminate` method
         terminate = subparsers.add_parser('terminate', parents=[common], help='terminate processes on a single node')
         terminate.set_defaults(callable=Application.terminate)
-        terminate.add_argument('node', help='the DNS name of the node to terminate')
-        terminate.add_argument('-u', '--uid-whitelist', nargs='+', type=int, help='whitelisted user IDs')
-        terminate.add_argument('-t', '--ssh-timeout', type=int, help='SSH Timeout')
+        terminate.add_argument('-n', '--nodes', nargs='+', required=True, help='the DNS name of the node to terminate')
+        terminate.add_argument('-u', '--uid-whitelist', nargs='+', required=True, help='whitelisted user IDs')
+        terminate.add_argument('-t', '--ssh-timeout', type=int, default=120, help='SSH Timeout')
 
 
 class Application:
