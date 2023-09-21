@@ -56,8 +56,7 @@ def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
 
 async def terminate_errant_processes(
     node: str,
-    ssh_limit: asyncio.Semaphore,
-    uid_whitelist,
+    uid_whitelist, ssh_limit: asyncio.Semaphore = asyncio.Semaphore(1),
     timeout: int = 120,
     debug: bool = False
 ) -> None:
@@ -65,8 +64,8 @@ async def terminate_errant_processes(
 
     Args:
         node: The DNS resolvable name of the node to terminate processes on
-        ssh_limit: Semaphore object used to limit concurrent SSH connections
         uid_whitelist: Do not terminate processes owned by the given UID
+        ssh_limit: Semaphore object used to limit concurrent SSH connections
         timeout: Maximum time in seconds to complete an outbound SSH connection
         debug: Log which process to terminate but do not terminate them
     """
