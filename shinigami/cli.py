@@ -58,7 +58,7 @@ class Parser(BaseParser):
         scan.set_defaults(callable=Application.scan)
         scan.add_argument('-c', '--clusters', nargs='+', required=True, help='cluster names to scan')
         scan.add_argument('-i', '--ignore-nodes', nargs='*', help='ignore given nodes')
-        scan.add_argument('-u', '--uid-whitelist', type=json.loads, required=True, help='whitelisted user IDs')
+        scan.add_argument('-u', '--uid-whitelist', nargs='+', type=json.loads, required=True, help='whitelisted user IDs')
         scan.add_argument('-m', '--max-concurrent', type=int, default=self.DEFAULT_CONCURRENT, help='maximum SSH connections')
         scan.add_argument('-t', '--ssh-timeout', type=int, default=self.DEFAULT_TIMEOUT, help='SSH Timeout')
 
@@ -66,7 +66,7 @@ class Parser(BaseParser):
         terminate = subparsers.add_parser('terminate', parents=[common], help='terminate processes on a single node')
         terminate.set_defaults(callable=Application.terminate)
         terminate.add_argument('-n', '--nodes', nargs='+', required=True, help='the DNS name of the node to terminate')
-        terminate.add_argument('-u', '--uid-whitelist', type=json.loads, required=True, help='whitelisted user IDs')
+        terminate.add_argument('-u', '--uid-whitelist', nargs='+', type=json.loads, required=True, help='whitelisted user IDs')
         terminate.add_argument('-m', '--max-concurrent', type=int, default=self.DEFAULT_CONCURRENT, help='maximum SSH connections')
         terminate.add_argument('-t', '--ssh-timeout', type=int, default=self.DEFAULT_TIMEOUT, help='SSH Timeout')
 
