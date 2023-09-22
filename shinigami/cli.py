@@ -1,6 +1,7 @@
 """The executable application and its command-line interface."""
 
 import asyncio
+import inspect
 import logging
 import logging.config
 import logging.handlers
@@ -33,6 +34,9 @@ class BaseParser(ArgumentParser):
 class Parser(BaseParser):
     """Defines the command-line interface and parses command-line arguments"""
 
+    DEFAULT_CONCURRENT = 1
+    DEFAULT_TIMEOUT = 120
+
     def __init__(self) -> None:
         """Define the command-line interface"""
 
@@ -53,17 +57,18 @@ class Parser(BaseParser):
         scan = subparsers.add_parser('scan', parents=[common], help='terminate processes on one or more clusters')
         scan.set_defaults(callable=Application.scan)
         scan.add_argument('-c', '--clusters', nargs='+', required=True, help='cluster names to scan')
-        scan.add_argument('-u', '--uid-whitelist', type=json.loads, required=True, help='whitelisted user IDs')
         scan.add_argument('-i', '--ignore-nodes', nargs='*', help='ignore given nodes')
-        scan.add_argument('-m', '--max-concurrent', type=int, help='maximum SSH connections')
-        scan.add_argument('-t', '--ssh-timeout', type=int, default=120, help='SSH Timeout')
+        scan.add_argument('-u', '--uid-whitelist', type=json.loads, required=True, help='whitelisted user IDs')
+        scan.add_argument('-m', '--max-concurrent', type=int, default=self.DEFAULT_CONCURRENT, help='maximum SSH connections')
+        scan.add_argument('-t', '--ssh-timeout', type=int, default=self.DEFAULT_TIMEOUT, help='SSH Timeout')
 
         # Subparser for the `Application.terminate` method
         terminate = subparsers.add_parser('terminate', parents=[common], help='terminate processes on a single node')
         terminate.set_defaults(callable=Application.terminate)
         terminate.add_argument('-n', '--nodes', nargs='+', required=True, help='the DNS name of the node to terminate')
         terminate.add_argument('-u', '--uid-whitelist', type=json.loads, required=True, help='whitelisted user IDs')
-        terminate.add_argument('-t', '--ssh-timeout', type=int, default=120, help='SSH Timeout')
+        terminate.add_argument('-m', '--max-concurrent', type=int, default=self.DEFAULT_CONCURRENT, help='maximum SSH connections')
+        terminate.add_argument('-t', '--ssh-timeout', type=int, default=self.DEFAULT_TIMEOUT, help='SSH Timeout')
 
 
 class Application:
@@ -172,7 +177,10 @@ class Application:
         cls._configure_logging(args.verbosity)
 
         try:
-            asyncio.run(args.callable(args))
+            # Extract the subset of arguments that are valid for the function ``args.callable``
+            valid_params = inspect.signature(args.callable).parameters
+            valid_arguments = {key: value for key, value in vars(args).items() if key in valid_params}
+            asyncio.run(args.callable(**valid_arguments))
 
         except KeyboardInterrupt:
             pass
