@@ -7,6 +7,7 @@ import logging.handlers
 import sys
 from argparse import ArgumentParser
 from typing import List
+import json
 
 from . import __version__, utils
 
@@ -42,8 +43,9 @@ class Parser(BaseParser):
 
         # This parser defines reusable arguments and is not exposed to the user.
         common = ArgumentParser(add_help=False)
-        common.add_argument('--debug', action='store_true', help='force the application to run in debug mode')
-        common.add_argument(
+        common_group = common.add_argument_group('debugging options')
+        common_group.add_argument('--debug', action='store_true', help='force the application to run in debug mode')
+        common_group.add_argument(
             '-v', action='count', dest='verbosity', default=0,
             help='set verbosity to warning (-v), info (-vv), or debug (-vvv)')
 
@@ -51,16 +53,16 @@ class Parser(BaseParser):
         scan = subparsers.add_parser('scan', parents=[common], help='terminate processes on one or more clusters')
         scan.set_defaults(callable=Application.scan)
         scan.add_argument('-c', '--clusters', nargs='+', required=True, help='cluster names to scan')
-        scan.add_argument('-u', '--uid-whitelist', nargs='+', required=True, help='whitelisted user IDs')
+        scan.add_argument('-u', '--uid-whitelist', type=json.loads, required=True, help='whitelisted user IDs')
         scan.add_argument('-i', '--ignore-nodes', nargs='*', help='ignore given nodes')
         scan.add_argument('-m', '--max-concurrent', type=int, help='maximum SSH connections')
-        scan.add_argument('-t', '--ssh-timeout', type=int, help='SSH Timeout')
+        scan.add_argument('-t', '--ssh-timeout', type=int, default=120, help='SSH Timeout')
 
         # Subparser for the `Application.terminate` method
         terminate = subparsers.add_parser('terminate', parents=[common], help='terminate processes on a single node')
         terminate.set_defaults(callable=Application.terminate)
         terminate.add_argument('-n', '--nodes', nargs='+', required=True, help='the DNS name of the node to terminate')
-        terminate.add_argument('-u', '--uid-whitelist', nargs='+', required=True, help='whitelisted user IDs')
+        terminate.add_argument('-u', '--uid-whitelist', type=json.loads, required=True, help='whitelisted user IDs')
         terminate.add_argument('-t', '--ssh-timeout', type=int, default=120, help='SSH Timeout')
 
 
