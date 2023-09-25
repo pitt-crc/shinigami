@@ -77,7 +77,7 @@ class Application:
     """Entry point for instantiating and executing the application"""
 
     @staticmethod
-    def configure_logging(verbosity: int) -> None:
+    def _configure_logging(verbosity: int) -> None:
         """Configure Python logging
 
         Configured loggers include the following:
@@ -195,7 +195,7 @@ class Application:
         """
 
         args = Parser().parse_args(arg_list)
-        cls.configure_logging(args.verbosity)
+        cls._configure_logging(args.verbosity)
 
         try:
             # Extract the subset of arguments that are valid for the function ``args.callable``
