@@ -2,13 +2,13 @@
 
 import asyncio
 import inspect
+import json
 import logging
 import logging.config
 import logging.handlers
 import sys
 from argparse import ArgumentParser
 from typing import List
-import json
 
 from . import __version__, utils
 
@@ -23,6 +23,7 @@ class BaseParser(ArgumentParser):
             message: The usage message
         """
 
+        # Print the help text if less than two commands are typed into the commandline
         if len(sys.argv) <= 2:
             self.print_help()
             super().exit(1)
@@ -45,7 +46,7 @@ class Parser(BaseParser):
         subparsers = self.add_subparsers(required=True, parser_class=BaseParser)
         self.add_argument('--version', action='version', version=__version__)
 
-        # This parser defines reusable arguments and is not exposed to the user.
+        # This parser defines reusable arguments and is not exposed to the user
         common = ArgumentParser(add_help=False)
         common_group = common.add_argument_group('debugging options')
         common_group.add_argument('--debug', action='store_true', help='force the application to run in debug mode')
@@ -123,15 +124,15 @@ class Application:
 
     @staticmethod
     async def scan(clusters, ignore_nodes, uid_whitelist, max_concurrent, ssh_timeout, debug) -> None:
-        """Terminate errant processes on all clusters/nodes configured in application settings.
+        """Terminate orphaned processes on all clusters/nodes configured in application settings.
 
         Args:
-            clusters:
-            ignore_nodes:
-            uid_whitelist:
-            max_concurrent:
-            ssh_timeout:
-            debug:
+            clusters: Slurm cluster names
+            ignore_nodes: List of nodes to ignore
+            uid_whitelist: UID values to terminate orphaned processes for
+            max_concurrent: Maximum number of concurrent ssh connections
+            ssh_timeout: Timeout for SSH connections
+            debug: Optionally log but do not terminate processes
         """
 
         # Clusters are handled synchronously, nodes are handled asynchronously
@@ -146,10 +147,10 @@ class Application:
 
         Args:
             nodes:
-            uid_whitelist:
-            max_concurrent:
-            ssh_timeout:
-            debug:
+            uid_whitelist: UID values to terminate orphaned processes for
+            max_concurrent: Maximum number of concurrent ssh connections
+            ssh_timeout: Timeout for SSH connections
+            debug: Optionally log but do not terminate processes
         """
 
         # Launch a concurrent job for each node in the cluster
@@ -171,7 +172,11 @@ class Application:
 
     @classmethod
     def execute(cls, arg_list: List[str] = None) -> None:
-        """Parse command-line arguments and execute the application"""
+        """Parse command-line arguments and execute the application
+
+        Args:
+            arg_list: Optionally parse the given arguments instead of the command line
+        """
 
         args = Parser().parse_args(arg_list)
         cls._configure_logging(args.verbosity)
