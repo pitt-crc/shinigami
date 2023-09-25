@@ -2,12 +2,11 @@
 
 import asyncio
 import inspect
-import json
 import logging
 import logging.config
-import logging.handlers
 import sys
 from argparse import ArgumentParser
+from json import loads
 from typing import List, Collection, Union
 
 from asyncssh import SSHClientConnectionOptions
@@ -36,9 +35,6 @@ class BaseParser(ArgumentParser):
 class Parser(BaseParser):
     """Defines the command-line interface and parses command-line arguments"""
 
-    DEFAULT_CONCURRENT = 1
-    DEFAULT_TIMEOUT = 120
-
     def __init__(self) -> None:
         """Define the command-line interface"""
 
@@ -51,8 +47,8 @@ class Parser(BaseParser):
         common = ArgumentParser(add_help=False)
 
         ssh_group = common.add_argument_group('ssh options')
-        ssh_group.add_argument('-m', '--max-concurrent', type=int, default=self.DEFAULT_CONCURRENT, help='maximum concurrent SSH connections')
-        ssh_group.add_argument('-t', '--ssh-timeout', type=int, default=self.DEFAULT_TIMEOUT, help='SSH connection timeout in seconds')
+        ssh_group.add_argument('-m', '--max-concurrent', type=int, default=1, help='maximum concurrent SSH connections')
+        ssh_group.add_argument('-t', '--ssh-timeout', type=int, default=120, help='SSH connection timeout in seconds')
 
         debug_group = common.add_argument_group('debugging options')
         debug_group.add_argument('--debug', action='store_true', help='run the application in debug mode')
@@ -64,13 +60,13 @@ class Parser(BaseParser):
         scan.set_defaults(callable=Application.scan)
         scan.add_argument('-c', '--clusters', nargs='+', required=True, help='cluster names to scan')
         scan.add_argument('-i', '--ignore-nodes', nargs='*', help='ignore given nodes')
-        scan.add_argument('-u', '--uid-whitelist', nargs='+', type=json.loads, required=True, help='whitelisted user IDs')
+        scan.add_argument('-u', '--uid-whitelist', nargs='+', type=loads, required=True, help='user IDs to scan')
 
         # Subparser for the `Application.terminate` method
         terminate = subparsers.add_parser('terminate', parents=[common], help='terminate processes on a single node')
         terminate.set_defaults(callable=Application.terminate)
         terminate.add_argument('-n', '--nodes', nargs='+', required=True, help='the DNS name of the node to terminate')
-        terminate.add_argument('-u', '--uid-whitelist', nargs='+', type=json.loads, required=True, help='whitelisted user IDs')
+        terminate.add_argument('-u', '--uid-whitelist', nargs='+', type=loads, required=True, help='user IDs to scan')
 
 
 class Application:
