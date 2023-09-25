@@ -89,7 +89,10 @@ async def terminate_errant_processes(
         for _, row in terminate.iterrows():
             logging.debug(f'[{node}] Marking for termination {dict(row)}')
 
-        if not debug:
+        if terminate.empty:
+            logging.info(f'[{node}] No orphans found')
+
+        elif not debug:
             proc_id_str = ','.join(terminate.PGID.astype(str))
             logging.info(f"[{node}] Sending termination signal for process groups {proc_id_str}")
             await conn.run(f"pkill --signal -9 --pgroup {proc_id_str}", check=True)
