@@ -25,8 +25,7 @@ class BaseParser(ArgumentParser):
             message: The usage message
         """
 
-        # Print the help text if less than two commands are typed into the commandline
-        if len(sys.argv) <= 2:
+        if len(sys.argv) == 1:
             self.print_help()
             super().exit(1)
 
@@ -52,14 +51,13 @@ class Parser(BaseParser):
         common = ArgumentParser(add_help=False)
 
         ssh_group = common.add_argument_group('ssh options')
-        ssh_group.add_argument('-m', '--max-concurrent', type=int, default=self.DEFAULT_CONCURRENT, help='maximum SSH connections')
-        ssh_group.add_argument('-t', '--ssh-timeout', type=int, default=self.DEFAULT_TIMEOUT, help='SSH Timeout')
+        ssh_group.add_argument('-m', '--max-concurrent', type=int, default=self.DEFAULT_CONCURRENT, help='maximum concurrent SSH connections')
+        ssh_group.add_argument('-t', '--ssh-timeout', type=int, default=self.DEFAULT_TIMEOUT, help='SSH connection timeout in seconds')
 
         debug_group = common.add_argument_group('debugging options')
-        debug_group.add_argument('--debug', action='store_true', help='force the application to run in debug mode')
-        debug_group.add_argument(
-            '-v', action='count', dest='verbosity', default=0,
-            help='set verbosity to warning (-v), info (-vv), or debug (-vvv)')
+        debug_group.add_argument('--debug', action='store_true', help='run the application in debug mode')
+        debug_group.add_argument('-v', action='count', dest='verbosity', default=0,
+                                 help='set verbosity to warning (-v), info (-vv), or debug (-vvv)')
 
         # Subparser for the `Application.scan` method
         scan = subparsers.add_parser('scan', parents=[common], help='terminate processes on one or more clusters')
