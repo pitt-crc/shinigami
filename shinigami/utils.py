@@ -83,13 +83,14 @@ async def terminate_errant_processes(
         # Identify orphaned processes and filter them by the UID whitelist
         orphaned = process_df[process_df.PPID == 1]
         terminate = orphaned[orphaned['UID'].apply(id_in_whitelist, whitelist=uid_whitelist)]
+
+        for _, row in terminate.iterrows():
+            logging.info(f'[{node}] Marking for termination {dict(row)}')
+
         if terminate.empty:
             logging.info(f'[{node}] no processes found')
 
-        for _, row in terminate.iterrows():
-            logging.debug(f'[{node}] Marking for termination {dict(row)}')
-
-        if not debug:
+        elif not debug:
             proc_id_str = ','.join(terminate.PGID.astype(str))
             logging.info(f'[{node}] Sending termination signal for process groups {proc_id_str}')
             await conn.run(f"pkill --signal -9 --pgroup {proc_id_str}", check=True)
