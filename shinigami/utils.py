@@ -5,7 +5,7 @@ import logging
 from io import StringIO
 from shlex import split
 from subprocess import Popen, PIPE
-from typing import Union, Tuple, Collection
+from typing import Union, Tuple, Collection, List
 
 import asyncssh
 import pandas as pd
@@ -56,8 +56,9 @@ def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
 
 async def terminate_errant_processes(
     node: str,
-    uid_whitelist, ssh_limit: asyncio.Semaphore = asyncio.Semaphore(1),
-    timeout: int = 120,
+    uid_whitelist: Collection[Union[int, List[int]]],
+    ssh_limit: asyncio.Semaphore = asyncio.Semaphore(1),
+    ssh_options: asyncssh.SSHClientConnectionOptions = None,
     debug: bool = False
 ) -> None:
     """Terminate non-Slurm processes on a given node
@@ -66,12 +67,9 @@ async def terminate_errant_processes(
         node: The DNS resolvable name of the node to terminate processes on
         uid_whitelist: Do not terminate processes owned by the given UID
         ssh_limit: Semaphore object used to limit concurrent SSH connections
-        timeout: Maximum time in seconds to complete an outbound SSH connection
+        ssh_options: Options for configuring the outbound SSH connection
         debug: Log which process to terminate but do not terminate them
     """
-
-    # Define SSH connection settings
-    ssh_options = asyncssh.SSHClientConnectionOptions(connect_timeout=timeout)
 
     logging.debug(f'[{node}] Waiting for SSH pool')
     async with ssh_limit, asyncssh.connect(node, options=ssh_options) as conn:

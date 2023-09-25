@@ -10,6 +10,8 @@ import sys
 from argparse import ArgumentParser
 from typing import List, Collection, Union
 
+from asyncssh import SSHClientConnectionOptions
+
 from . import __version__, utils
 
 
@@ -128,8 +130,8 @@ class Application:
         clusters: Collection[str],
         ignore_nodes: Collection[str],
         uid_whitelist: Collection[Union[int, List[int]]],
-        max_concurrent: int,
-        ssh_timeout: asyncio.Semaphore,
+        max_concurrent: asyncio.Semaphore,
+        ssh_timeout: int,
         debug: bool
     ) -> None:
         """Terminate orphaned processes on all clusters/nodes configured in application settings.
@@ -153,8 +155,8 @@ class Application:
     async def terminate(
         nodes: Collection[str],
         uid_whitelist: Collection[Union[int, List[int]]],
-        max_concurrent: int,
-        ssh_timeout: asyncio.Semaphore,
+        max_concurrent: asyncio.Semaphore,
+        ssh_timeout: int,
         debug: bool
     ) -> None:
         """Terminate processes on a given node
@@ -167,13 +169,15 @@ class Application:
             debug: Optionally log but do not terminate processes
         """
 
+        ssh_options = SSHClientConnectionOptions(connect_timeout=ssh_timeout)
+
         # Launch a concurrent job for each node in the cluster
         coroutines = [
             utils.terminate_errant_processes(
                 node=node,
                 uid_whitelist=uid_whitelist,
                 ssh_limit=asyncio.Semaphore(max_concurrent),
-                timeout=ssh_timeout,
+                ssh_options=ssh_options,
                 debug=debug)
             for node in nodes
         ]
