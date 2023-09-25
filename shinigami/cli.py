@@ -8,7 +8,7 @@ import logging.config
 import logging.handlers
 import sys
 from argparse import ArgumentParser
-from typing import List
+from typing import List, Collection, Union
 
 from . import __version__, utils
 
@@ -123,7 +123,14 @@ class Application:
         })
 
     @staticmethod
-    async def scan(clusters, ignore_nodes, uid_whitelist, max_concurrent, ssh_timeout, debug) -> None:
+    async def scan(
+        clusters: Collection[str],
+        ignore_nodes: Collection[str],
+        uid_whitelist: Collection[Union[int, List[int]]],
+        max_concurrent: int,
+        ssh_timeout: asyncio.Semaphore,
+        debug: bool
+    ) -> None:
         """Terminate orphaned processes on all clusters/nodes configured in application settings.
 
         Args:
@@ -142,7 +149,13 @@ class Application:
             await Application.terminate(nodes, uid_whitelist, max_concurrent, ssh_timeout, debug)
 
     @staticmethod
-    async def terminate(nodes, uid_whitelist, max_concurrent, ssh_timeout, debug) -> None:
+    async def terminate(
+        nodes: Collection[str],
+        uid_whitelist: Collection[Union[int, List[int]]],
+        max_concurrent: int,
+        ssh_timeout: asyncio.Semaphore,
+        debug: bool
+    ) -> None:
         """Terminate processes on a given node
 
         Args:
