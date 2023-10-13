@@ -10,7 +10,7 @@ string matching. See the ``settings`` module for more details.
 import importlib.metadata
 
 try:
-    __version__ = importlib.metadata.version('shinigami')
+    __version__ = importlib.metadata.version('crc-shinigami')
 
 except importlib.metadata.PackageNotFoundError:  # pragma: no cover
     __version__ = '0.0.0'

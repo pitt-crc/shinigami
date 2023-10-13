@@ -3,7 +3,10 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "shinigami"
+name = "crc-shinigami"
+packages = [
+    { include = "shinigami" },
+]
 version = "0.0.0"  # Version is set dynamically by the CI tool on publication
 authors = ["Pitt Center for Research Computing"]
 readme = "README.md"
@@ -28,7 +31,7 @@ shinigami = "shinigami.cli:Application.execute"
 python = ">=3.8"
 pydantic = "^2.0.3"
 pydantic-settings = "^2.0.2"
-asyncssh = {extras = ["bcrypt", "fido2"], version = "^2.13.2"}
+asyncssh = { extras = ["bcrypt", "fido2"], version = "^2.13.2" }
 pandas = "1.5.3"  # Newer versions are incompatible with Python 3.8
 
 [tool.poetry.group.tests]

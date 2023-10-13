@@ -31,6 +31,12 @@ jobs:
             environment: publish-pypi
 
     steps:
+<<<<<<< HEAD
+=======
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+>>>>>>> v0.4.x
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -41,6 +47,7 @@ jobs:
         with:
           virtualenvs-create: false
 
+<<<<<<< HEAD
       - name: Checkout source
         uses: actions/checkout@v3
 
@@ -50,6 +57,14 @@ jobs:
         run: |
           release_tag=${{github.ref}}
           poetry version "${release_tag:11}"
+=======
+      # Get the new package version from the release tag
+      # Git release tags are expected to start with "refs/tags/v"
+      - name: Set package version
+        run: |
+          release_tag=${{github.ref}}
+          poetry version "${release_tag#refs/tags/v}"
+>>>>>>> v0.4.x
 
       - name: Build package
         run: poetry build -v
@@ -57,7 +72,11 @@ jobs:
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+<<<<<<< HEAD
           verbose: true
+=======
+          print-hash: true
+>>>>>>> v0.4.x
           repository-url: ${{ matrix.host }}
           user: ${{ secrets.REPO_USER }}
           password: ${{ secrets.REPO_PASSWORD }}

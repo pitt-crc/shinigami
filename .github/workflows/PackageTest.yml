@@ -4,6 +4,11 @@ on:
   workflow_dispatch:
   workflow_call:
   push:
+<<<<<<< HEAD
+=======
+  schedule:
+    - cron: 0 7 1,15 * *
+>>>>>>> v0.4.x
 
 jobs:
   run-tests:
@@ -12,6 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+<<<<<<< HEAD
         slurm_version:
           - 20.02.5.1
           - 20.11.9.1
@@ -37,6 +43,23 @@ jobs:
         run: |
           pip install poetry
           poetry env use python${{ matrix.python_version }}
+=======
+        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: false
+>>>>>>> v0.4.x
 
       - name: Install dependencies
         run: poetry install --with tests
@@ -50,7 +73,10 @@ jobs:
       # Report partial coverage results to codacy for the current python version
       - name: Report partial coverage results
         if: github.event_name != 'release'
+<<<<<<< HEAD
         shell: bash
+=======
+>>>>>>> v0.4.x
         run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report --partial -l Python -r coverage.xml
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
@@ -63,7 +89,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Finish reporting coverage
+<<<<<<< HEAD
         shell: bash
+=======
+>>>>>>> v0.4.x
         run: bash <(curl -Ls https://coverage.codacy.com/get.sh) final
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
