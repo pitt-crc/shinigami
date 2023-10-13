@@ -60,7 +60,7 @@ class Parser(BaseParser):
         scan.set_defaults(callable=Application.scan)
         scan.add_argument('-c', '--clusters', nargs='+', required=True, help='cluster names to scan')
         scan.add_argument('-i', '--ignore-nodes', nargs='*', help='ignore given nodes')
-        scan.add_argument('-u', '--uid-whitelist', nargs='+', type=loads, required=True, help='user IDs to scan')
+        scan.add_argument('-u', '--uid-whitelist', nargs='+', type=loads, default=[0], help='user IDs to scan')
 
         # Subparser for the `Application.terminate` method
         terminate = subparsers.add_parser('terminate', parents=[common], help='terminate processes on a single node')
