@@ -14,16 +14,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11" ]
+        slurm_version:
+          - 20.11.9.1
+          - 22.05.2.1
+          - 23.02.5.1
+        python_version:
+          - 3.8
+          - 3.9
+          - 3.10
+          - 3.11
+
+    container:
+      image: ghcr.io/pitt-crc/test-env:${{ matrix.slurm_version }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
+      - name: Setup environment
+        run: /usr/local/bin/entrypoint.sh
+
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
@@ -43,6 +55,7 @@ jobs:
       - name: Report partial coverage results
         if: github.event_name != 'release'
         run: bash <(curl -Ls https://coverage.codacy.com/get.sh) report --partial -l Python -r coverage.xml
+        shell: bash
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
