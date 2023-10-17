@@ -5,7 +5,7 @@ from shinigami import utils
 # For information on resources defined in the testing environment,
 # see https://github.com/pitt-crc/Slurm-Test-Environment/
 TEST_CLUSTER = 'development'
-TEST_NODES = set(f'c{i}' for i in range(11))
+TEST_NODES = set(f'c{i}' for i in range(1, 11))
 
 
 class NodesMatchTestEnvironment(TestCase):
