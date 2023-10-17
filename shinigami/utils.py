@@ -5,7 +5,7 @@ import logging
 from io import StringIO
 from shlex import split
 from subprocess import Popen, PIPE
-from typing import Union, Tuple, Collection
+from typing import Union, Tuple, Collection, List
 
 import asyncssh
 import pandas as pd
@@ -58,23 +58,20 @@ def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
 
 async def terminate_errant_processes(
     node: str,
-    ssh_limit: asyncio.Semaphore,
-    uid_whitelist,
-    timeout: int = 120,
+    uid_whitelist: Collection[Union[int, List[int]]],
+    ssh_limit: asyncio.Semaphore = asyncio.Semaphore(1),
+    ssh_options: asyncssh.SSHClientConnectionOptions = None,
     debug: bool = False
 ) -> None:
     """Terminate non-Slurm processes on a given node
 
     Args:
         node: The DNS resolvable name of the node to terminate processes on
-        ssh_limit: Semaphore object used to limit concurrent SSH connections
         uid_whitelist: Do not terminate processes owned by the given UID
-        timeout: Maximum time in seconds to complete an outbound SSH connection
+        ssh_limit: Semaphore object used to limit concurrent SSH connections
+        ssh_options: Options for configuring the outbound SSH connection
         debug: Log which process to terminate but do not terminate them
     """
-
-    # Define SSH connection settings
-    ssh_options = asyncssh.SSHClientConnectionOptions(connect_timeout=timeout)
 
     logging.debug(f'[{node}] Waiting for SSH pool')
     async with ssh_limit, asyncssh.connect(node, options=ssh_options) as conn:
@@ -88,11 +85,12 @@ async def terminate_errant_processes(
         # Identify orphaned processes and filter them by the UID whitelist
         orphaned = process_df[process_df.PPID == INIT_PROCESS_ID]
         terminate = orphaned[orphaned['UID'].apply(id_in_whitelist, whitelist=uid_whitelist)]
+
         for _, row in terminate.iterrows():
-            logging.debug(f'[{node}] Marking for termination {dict(row)}')
+            logging.info(f'[{node}] Marking for termination {dict(row)}')
 
         if terminate.empty:
-            logging.info(f'[{node}] No orphans found')
+            logging.info(f'[{node}] no processes found')
 
         elif not debug:
             proc_id_str = ','.join(terminate.PGID.unique().astype(str))
