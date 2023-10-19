@@ -5,10 +5,10 @@ import inspect
 import logging
 import logging.config
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, RawTextHelpFormatter
 from json import loads
 from pathlib import Path
-from typing import List, Collection, Union, Optional
+from typing import List, Collection, Union
 
 from asyncssh import SSHClientConnectionOptions
 
@@ -28,24 +28,22 @@ class BaseParser(ArgumentParser):
 
         if len(sys.argv) == 1:
             self.print_help()
-            super().exit(1)
 
-        else:
-            super().error(message)
+        raise SystemExit(message)
 
 
 class Parser(BaseParser):
     """Defines the command-line interface and parses command-line arguments"""
 
-    def __init__(self, defaults: Optional[Defaults]) -> None:
+    def __init__(self, defaults: Defaults = Defaults()) -> None:
         """Define the command-line interface"""
 
         # Configure the top level parser
-        super().__init__(prog='shinigami', description=self._build_description())
+        super().__init__(prog='shinigami', formatter_class=RawTextHelpFormatter, description=self._build_description())
         subparsers = self.add_subparsers(required=True, parser_class=BaseParser)
         self.add_argument('--version', action='version', version=__version__)
 
-        # This parser defines reusable arguments and is not exposed to the user
+        # This parser defines reusable arguments and is not directly exposed to the user
         common = ArgumentParser(add_help=False)
         common.add_argument('-i', '--ignore-nodes', nargs='*', default=defaults.ignore_nodes, help=f'ignore given nodes (default: {defaults.ignore_nodes or None})')
         common.add_argument('-u', '--uid-whitelist', nargs='+', type=loads, default=defaults.uid_whitelist, help=f'user IDs to scan (default: {defaults.uid_whitelist or None})')
@@ -60,7 +58,7 @@ class Parser(BaseParser):
 
         # Subparser for the `Application.scan` method
         scan = subparsers.add_parser('scan', parents=[common], help='terminate processes on one or more clusters')
-        scan.add_argument('-c', '--clusters', nargs='+', required=True, help='cluster names to scan')
+        scan.add_argument('-c', '--clusters', nargs='+', required=True, help=f'cluster names to scan (default: {defaults.clusters or None})')
         scan.set_defaults(callable=Application.scan)
 
         # Subparser for the `Application.terminate` method
