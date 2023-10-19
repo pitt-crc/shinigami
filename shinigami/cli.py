@@ -7,11 +7,13 @@ import logging.config
 import sys
 from argparse import ArgumentParser
 from json import loads
-from typing import List, Collection, Union
+from pathlib import Path
+from typing import List, Collection, Union, Optional
 
 from asyncssh import SSHClientConnectionOptions
 
 from . import __version__, utils
+from .defaults import Defaults, SETTINGS_PATH
 
 
 class BaseParser(ArgumentParser):
@@ -35,38 +37,48 @@ class BaseParser(ArgumentParser):
 class Parser(BaseParser):
     """Defines the command-line interface and parses command-line arguments"""
 
-    def __init__(self) -> None:
+    def __init__(self, defaults: Optional[Defaults]) -> None:
         """Define the command-line interface"""
 
         # Configure the top level parser
-        super().__init__(prog='shinigami', description='Scan Slurm compute nodes and terminate orphan processes.')
+        super().__init__(prog='shinigami', description=self._build_description())
         subparsers = self.add_subparsers(required=True, parser_class=BaseParser)
         self.add_argument('--version', action='version', version=__version__)
 
         # This parser defines reusable arguments and is not exposed to the user
         common = ArgumentParser(add_help=False)
+        common.add_argument('-i', '--ignore-nodes', nargs='*', default=defaults.ignore_nodes, help=f'ignore given nodes (default: {defaults.ignore_nodes or None})')
+        common.add_argument('-u', '--uid-whitelist', nargs='+', type=loads, default=defaults.uid_whitelist, help=f'user IDs to scan (default: {defaults.uid_whitelist or None})')
 
         ssh_group = common.add_argument_group('ssh options')
-        ssh_group.add_argument('-m', '--max-concurrent', type=int, default=1, help='maximum concurrent SSH connections')
-        ssh_group.add_argument('-t', '--ssh-timeout', type=int, default=120, help='SSH connection timeout in seconds')
+        ssh_group.add_argument('-m', '--max-concurrent', type=int, default=defaults.max_concurrent, help=f'maximum concurrent SSH connections (default: {defaults.max_concurrent})')
+        ssh_group.add_argument('-t', '--ssh-timeout', type=int, default=defaults.ssh_timeout, help=f'SSH connection timeout in seconds (default: {defaults.ssh_timeout})')
 
         debug_group = common.add_argument_group('debugging options')
         debug_group.add_argument('--debug', action='store_true', help='run the application in debug mode')
-        debug_group.add_argument('-v', action='count', dest='verbosity', default=0,
-                                 help='set verbosity to warning (-v), info (-vv), or debug (-vvv)')
+        debug_group.add_argument('-v', action='count', dest='verbosity', default=0, help='set verbosity to warning (-v), info (-vv), or debug (-vvv)')
 
         # Subparser for the `Application.scan` method
         scan = subparsers.add_parser('scan', parents=[common], help='terminate processes on one or more clusters')
-        scan.set_defaults(callable=Application.scan)
         scan.add_argument('-c', '--clusters', nargs='+', required=True, help='cluster names to scan')
-        scan.add_argument('-i', '--ignore-nodes', nargs='*', default=[], help='ignore given nodes')
-        scan.add_argument('-u', '--uid-whitelist', nargs='+', type=loads, default=[0], help='user IDs to scan')
+        scan.set_defaults(callable=Application.scan)
 
         # Subparser for the `Application.terminate` method
         terminate = subparsers.add_parser('terminate', parents=[common], help='terminate processes on a single node')
         terminate.set_defaults(callable=Application.terminate)
-        terminate.add_argument('-n', '--nodes', nargs='+', required=True, help='the DNS name of the node to terminate')
-        terminate.add_argument('-u', '--uid-whitelist', nargs='+', type=loads, default=[0], help='user IDs to scan')
+
+    @staticmethod
+    def _build_description(settings_path: Path = SETTINGS_PATH) -> str:
+        """Build the top level parser description
+
+        The returned description warns users if custom default settings are configured on the parent machine.
+        """
+
+        base_description = 'Scan Slurm compute nodes and terminate orphan processes.'
+        if settings_path.exists():
+            base_description += f'\n\nCustom default settings are currently defined in {settings_path}'
+
+        return base_description
 
 
 class Application:
@@ -190,7 +202,8 @@ class Application:
             arg_list: Optionally parse the given arguments instead of the command line
         """
 
-        args = Parser().parse_args(arg_list)
+        defaults = Defaults.load()
+        args = Parser(defaults).parse_args(arg_list)
         cls._configure_logging(args.verbosity)
 
         try:
