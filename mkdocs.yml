@@ -1,0 +1,16 @@
+site_name: CRC Shinigami
+repo_url: https://github.com/pitt-crc/shinigami
+theme:
+  name: readthedocs
+  highlightjs: true
+  include_homepage_in_sidebar: true
+  prev_next_buttons_location: bottom
+plugins:
+  - search:
+  - mkdocstrings:
+      custom_templates: templates
+nav:
+  - index.md
+  - installation.md
+  - usage.md
+copyright: Copyright &copy; University of Pittsburgh. All rights reserved.
