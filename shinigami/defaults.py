@@ -17,7 +17,7 @@ class Defaults(BaseSettings):
 
     uid_whitelist: Tuple[Union[int, Tuple[int, int]], ...] = Field(
         title='Whitelisted User IDs',
-        default=(0,),
+        default=tuple(),
         description='Only terminate processes launched by users with the given UID values.')
 
     clusters: Tuple[str, ...] = Field(
