@@ -14,7 +14,11 @@ INIT_PROCESS_ID = 1
 
 
 def id_in_whitelist(id_value: int, whitelist: Collection[Union[int, Tuple[int, int]]]) -> bool:
-    """Return whether an ID is in a list of ID values
+    """Return whether an ID is in a list of ID value definitions
+
+    The `whitelist`  of ID values can contain a mix of integers and tuples
+    of integer ranges. For example, [0, 1, (2, 9), 10] includes all IDs from
+    zero through ten.
 
     Args:
         id_value: The ID value to check
@@ -34,12 +38,12 @@ def id_in_whitelist(id_value: int, whitelist: Collection[Union[int, Tuple[int, i
     return False
 
 
-def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
+def get_nodes(cluster: str, ignore_nodes: Collection[str] = tuple()) -> set:
     """Return a set of nodes included in a given Slurm cluster
 
     Args:
         cluster: Name of the cluster to fetch nodes for
-        ignore_substring: Do not return nodes containing any of the given substrings
+        ignore_nodes: Do not return nodes included in the provided list
 
     Returns:
         A set of cluster names
@@ -52,8 +56,7 @@ def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
         raise RuntimeError(stderr)
 
     all_nodes = stdout.decode().strip().split('\n')
-    is_valid = lambda node: not any(substring in node for substring in ignore_substring)
-    return set(filter(is_valid, all_nodes))
+    return set(node for node in all_nodes if node not in ignore_nodes)
 
 
 async def terminate_errant_processes(
