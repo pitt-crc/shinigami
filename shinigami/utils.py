@@ -5,14 +5,20 @@ import logging
 from io import StringIO
 from shlex import split
 from subprocess import Popen, PIPE
-from typing import Union, Tuple, Collection
+from typing import Union, Tuple, Collection, List
 
 import asyncssh
 import pandas as pd
 
+INIT_PROCESS_ID = 1
+
 
 def id_in_whitelist(id_value: int, whitelist: Collection[Union[int, Tuple[int, int]]]) -> bool:
-    """Return whether an ID is in a list of ID values
+    """Return whether an ID is in a list of ID value definitions
+
+    The `whitelist`  of ID values can contain a mix of integers and tuples
+    of integer ranges. For example, [0, 1, (2, 9), 10] includes all IDs from
+    zero through ten.
 
     Args:
         id_value: The ID value to check
@@ -32,12 +38,12 @@ def id_in_whitelist(id_value: int, whitelist: Collection[Union[int, Tuple[int, i
     return False
 
 
-def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
+def get_nodes(cluster: str, ignore_nodes: Collection[str] = tuple()) -> set:
     """Return a set of nodes included in a given Slurm cluster
 
     Args:
         cluster: Name of the cluster to fetch nodes for
-        ignore_substring: Do not return nodes containing any of the given substrings
+        ignore_nodes: Do not return nodes included in the provided list
 
     Returns:
         A set of cluster names
@@ -50,29 +56,25 @@ def get_nodes(cluster: str, ignore_substring: Collection[str]) -> set:
         raise RuntimeError(stderr)
 
     all_nodes = stdout.decode().strip().split('\n')
-    is_valid = lambda node: not any(substring in node for substring in ignore_substring)
-    return set(filter(is_valid, all_nodes))
+    return set(node for node in all_nodes if node not in ignore_nodes)
 
 
 async def terminate_errant_processes(
     node: str,
-    ssh_limit: asyncio.Semaphore,
-    uid_whitelist,
-    timeout: int = 120,
+    uid_whitelist: Collection[Union[int, List[int]]],
+    ssh_limit: asyncio.Semaphore = asyncio.Semaphore(1),
+    ssh_options: asyncssh.SSHClientConnectionOptions = None,
     debug: bool = False
 ) -> None:
     """Terminate non-Slurm processes on a given node
 
     Args:
         node: The DNS resolvable name of the node to terminate processes on
-        ssh_limit: Semaphore object used to limit concurrent SSH connections
         uid_whitelist: Do not terminate processes owned by the given UID
-        timeout: Maximum time in seconds to complete an outbound SSH connection
+        ssh_limit: Semaphore object used to limit concurrent SSH connections
+        ssh_options: Options for configuring the outbound SSH connection
         debug: Log which process to terminate but do not terminate them
     """
-
-    # Define SSH connection settings
-    ssh_options = asyncssh.SSHClientConnectionOptions(connect_timeout=timeout)
 
     logging.debug(f'[{node}] Waiting for SSH pool')
     async with ssh_limit, asyncssh.connect(node, options=ssh_options) as conn:
@@ -84,15 +86,16 @@ async def terminate_errant_processes(
         process_df = pd.read_fwf(StringIO(ps_return.stdout), widths=[11, 11, 11, 11, 500])
 
         # Identify orphaned processes and filter them by the UID whitelist
-        orphaned = process_df[process_df.PPID == 1]
+        orphaned = process_df[process_df.PPID == INIT_PROCESS_ID]
         terminate = orphaned[orphaned['UID'].apply(id_in_whitelist, whitelist=uid_whitelist)]
+
         for _, row in terminate.iterrows():
-            logging.debug(f'[{node}] Marking for termination {dict(row)}')
+            logging.info(f'[{node}] Marking for termination {dict(row)}')
 
         if terminate.empty:
-            logging.info(f'[{node}] No orphans found')
+            logging.info(f'[{node}] no processes found')
 
         elif not debug:
-            proc_id_str = ','.join(terminate.PGID.astype(str))
+            proc_id_str = ','.join(terminate.PGID.unique().astype(str))
             logging.info(f"[{node}] Sending termination signal for process groups {proc_id_str}")
-            await conn.run(f"pkill --signal -9 --pgroup {proc_id_str}", check=True)
+            await conn.run(f"pkill --signal 9 --pgroup {proc_id_str}", check=True)
