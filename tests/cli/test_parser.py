@@ -2,14 +2,26 @@
 
 from unittest import TestCase
 
-from shinigami.cli import Parser
+from shinigami.cli import Parser, BaseParser
 
 
-class ScanParser(TestCase):
+class BaseParsing(TestCase):
+    """Test custom parsing login encapsulated by the `BaseParser`  class"""
+
+    def test_error_handling(self) -> None:
+        """Test error messages are raised as `SystemExit` instances"""
+
+        parser = BaseParser()
+        error_message = "This is an error message"
+        with self.assertRaises(SystemExit, msg=error_message):
+            parser.error(error_message)
+
+
+class ScanSubParser(TestCase):
     """Test the behavior of the ``scan`` subparser"""
 
     def test_debug_option(self) -> None:
-        """Test the ``debug`` argument"""
+        """Test parsing of the ``debug`` argument"""
 
         parser = Parser()
 
@@ -84,7 +96,7 @@ class ScanParser(TestCase):
         self.assertSequenceEqual(mixed_out, parser.parse_args(mixed_command).uid_whitelist)
 
 
-class TerminateParser(TestCase):
+class TerminateSubParser(TestCase):
     """Test the behavior of the ``terminate`` subparser"""
 
     def test_debug_option(self) -> None:
