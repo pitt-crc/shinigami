@@ -97,7 +97,7 @@ class ScanSubParser(TestCase):
 
 
 class TerminateSubParser(TestCase):
-    """Test parsing of the behavior of the ``terminate`` subparser"""
+    """Test the behavior of the ``terminate`` subparser"""
 
     def test_debug_option(self) -> None:
         """Test the ``debug`` argument"""
