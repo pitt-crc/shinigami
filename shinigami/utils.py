@@ -59,6 +59,14 @@ def get_nodes(cluster: str, ignore_nodes: Collection[str] = tuple()) -> set:
     return set(node for node in all_nodes if node not in ignore_nodes)
 
 
+def build_grep_command(vars: Collection[str], proc: Collection[int]) -> str:
+
+    # grep -Eq '^DBUS_SESSION_BUS_ADDRESS=|^some_other_var=' /proc/44703/environ /proc/2235/environ;
+    variable_regex = '|'.join(f'^{variable}=' for variable in vars)
+    proc_files = ' '.join(f'/proc/{proc_id}/environ' for proc_id in proc)
+    return f"grep -Eq '{variable_regex}' {proc_files}"
+
+
 async def terminate_errant_processes(
     node: str,
     uid_whitelist: Collection[Union[int, List[int]]],
