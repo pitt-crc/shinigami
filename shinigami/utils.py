@@ -142,7 +142,7 @@ async def terminate_errant_processes(
     ssh_options: asyncssh.SSHClientConnectionOptions = None,
     debug: bool = False
 ) -> None:
-    """Terminate non-Slurm processes on a given node
+    """Terminate orphaned processes on a given node
 
     Args:
         node: The DNS resolvable name of the node to terminate processes on
