@@ -12,8 +12,10 @@ import pandas as pd
 
 INIT_PROCESS_ID = 1
 
+Whitelist = Collection[Union[int, Tuple[int, int]]]
 
-def id_in_whitelist(id_value: int, whitelist: Collection[Union[int, Tuple[int, int]]]) -> bool:
+
+def id_in_whitelist(id_value: int, whitelist: Whitelist) -> bool:
     """Return whether an ID is in a list of ID value definitions
 
     The `whitelist`  of ID values can contain a mix of integers and tuples
@@ -59,7 +61,7 @@ def get_nodes(cluster: str, ignore_nodes: Collection[str] = tuple()) -> set:
     return set(node for node in all_nodes if node not in ignore_nodes)
 
 
-async def get_remote_processes(conn) -> pd.DataFrame:
+async def get_remote_processes(conn: asyncssh.SSHClientConnection) -> pd.DataFrame:
     """Fetch running process data from the remote machine
 
     Args:
@@ -74,7 +76,7 @@ async def get_remote_processes(conn) -> pd.DataFrame:
     return pd.read_fwf(StringIO(ps_return.stdout), widths=[11, 11, 11, 11, 500])
 
 
-def filter_orphaned_processes(df, ppid_column: str = 'PPID'):
+def filter_orphaned_processes(df: pd.DataFrame, ppid_column: str = 'PPID') -> pd.DataFrame:
     """Filter a DataFrame to only include orphaned processes
 
     Given a DataFrame with system process data, return a subset of the data
@@ -91,7 +93,7 @@ def filter_orphaned_processes(df, ppid_column: str = 'PPID'):
     return df[df[ppid_column] == INIT_PROCESS_ID]
 
 
-def filter_user_processes(df, uid_whitelist, uid_column: str = 'UID'):
+def filter_user_processes(df: pd.DataFrame, uid_whitelist: Whitelist, uid_column: str = 'UID') -> pd.DataFrame:
     """Filter a DataFrame to only include whitelisted users
 
     Given a DataFrame with system process data, return a subset of the data
@@ -106,11 +108,11 @@ def filter_user_processes(df, uid_whitelist, uid_column: str = 'UID'):
         A filtered copy of the given DataFrame
     """
 
-    whitelist_index = df['UID'].apply(id_in_whitelist, whitelist=uid_whitelist)
+    whitelist_index = df[uid_column].apply(id_in_whitelist, whitelist=uid_whitelist)
     return df[whitelist_index]
 
 
-def filter_env_defined(df, var_names, pid_column: str = 'PID') -> pd.DataFrame:
+def filter_env_defined(df: pd.DataFrame, var_names: list[str], pid_column: str = 'PID') -> pd.DataFrame:
     """Filter a DataFrame to only include processes with variable definitions
 
     Given a DataFrame with system process data, return a subset of the data
