@@ -10,13 +10,18 @@ from typing import Union, Tuple, Collection, List
 import asyncssh
 import pandas as pd
 
+# Technically the init process ID may vary with the system
+# architecture, but 1 is an almost universal default
 INIT_PROCESS_ID = 1
 
+# Custom type hints
+Whitelist = Collection[Union[int, Tuple[int, int]]]
 
-def id_in_whitelist(id_value: int, whitelist: Collection[Union[int, Tuple[int, int]]]) -> bool:
+
+def _id_in_whitelist(id_value: int, whitelist: Whitelist) -> bool:
     """Return whether an ID is in a list of ID value definitions
 
-    The `whitelist`  of ID values can contain a mix of integers and tuples
+    The `whitelist` of ID values can contain a mix of integers and tuples
     of integer ranges. For example, [0, 1, (2, 9), 10] includes all IDs from
     zero through ten.
 
@@ -56,7 +61,83 @@ def get_nodes(cluster: str, ignore_nodes: Collection[str] = tuple()) -> set:
         raise RuntimeError(stderr)
 
     all_nodes = stdout.decode().strip().split('\n')
-    return set(node for node in all_nodes if node not in ignore_nodes)
+    return set(all_nodes) - set(ignore_nodes)
+
+
+async def get_remote_processes(conn: asyncssh.SSHClientConnection) -> pd.DataFrame:
+    """Fetch running process data from a remote machine
+
+    The returned DataFrame is guaranteed to have columns `PID`, `PPID`, `PGID`,
+    `UID`, and `CND`.
+
+    Args:
+        conn: Open SSH connection to the machine
+
+    Returns:
+        A pandas DataFrame with process data
+    """
+
+    # Add 1 to column widths when parsing ps output to account for space between columns
+    ps_return = await conn.run('ps -eo pid:10,ppid:10,pgid:10,uid:10,cmd:500', check=True)
+    return pd.read_fwf(StringIO(ps_return.stdout), widths=[11, 11, 11, 11, 500])
+
+
+def include_orphaned_processes(df: pd.DataFrame) -> pd.DataFrame:
+    """Filter a DataFrame to only include orphaned processes
+
+    Given a DataFrame with system process data, return a subset of the data
+    containing processes parented by `INIT_PROCESS_ID`.
+
+    See the `get_remote_processes` function for the assumed DataFrame data model.
+
+    Args:
+        df: A DataFrame with process data
+
+    Returns:
+        A copy of the given DataFrame
+    """
+
+    return df[df['PPID'] == INIT_PROCESS_ID]
+
+
+def include_user_whitelist(df: pd.DataFrame, uid_whitelist: Whitelist) -> pd.DataFrame:
+    """Filter a DataFrame to only include a subset of user IDs
+
+    Given a DataFrame with system process data, return a subset of the data
+    containing processes owned by the given user IDs.
+
+    See the `get_remote_processes` function for the assumed DataFrame data model.
+
+    Args:
+        df: A DataFrame with process data
+        uid_whitelist: List of user IDs to whitelist
+
+    Returns:
+        A copy of the given DataFrame
+    """
+
+    whitelist_index = df['UID'].apply(_id_in_whitelist, whitelist=uid_whitelist)
+    return df[whitelist_index]
+
+
+def exclude_active_slurm_users(df: pd.DataFrame) -> pd.DataFrame:
+    """Filter a DataFrame to exclude user IDs tied to a running slurm job
+
+    Given a DataFrame with system process data, return a subset of the data
+    that excludes processes owned by users running a `slurmd` command.
+
+    See the `get_remote_processes` function for the assumed DataFrame data model.
+
+    Args:
+        df: A DataFrame with process data
+
+    Returns:
+        A copy of the given DataFrame
+    """
+
+    is_slurm = df['CMD'].str.contains('slurmd')
+    slurm_uids = df['UID'][is_slurm].unique()
+    return df[~df['UID'].isin(slurm_uids)]
 
 
 async def terminate_errant_processes(
@@ -66,11 +147,11 @@ async def terminate_errant_processes(
     ssh_options: asyncssh.SSHClientConnectionOptions = None,
     debug: bool = False
 ) -> None:
-    """Terminate non-Slurm processes on a given node
+    """Terminate orphaned processes on a given node
 
     Args:
         node: The DNS resolvable name of the node to terminate processes on
-        uid_whitelist: Do not terminate processes owned by the given UID
+        uid_whitelist: Do not terminate processes owned by the given UIDs
         ssh_limit: Semaphore object used to limit concurrent SSH connections
         ssh_options: Options for configuring the outbound SSH connection
         debug: Log which process to terminate but do not terminate them
@@ -79,24 +160,20 @@ async def terminate_errant_processes(
     logging.debug(f'[{node}] Waiting for SSH pool')
     async with ssh_limit, asyncssh.connect(node, options=ssh_options) as conn:
         logging.info(f'[{node}] Scanning for processes')
+        process_df = await get_remote_processes(conn)
 
-        # Fetch running process data from the remote machine
-        # Add 1 to column widths when parsing ps output to account for space between columns
-        ps_return = await conn.run('ps -eo pid:10,ppid:10,pgid:10,uid:10,cmd:500', check=True)
-        process_df = pd.read_fwf(StringIO(ps_return.stdout), widths=[11, 11, 11, 11, 500])
+        # Filter them by various whitelist/blacklist criteria
+        process_df = include_orphaned_processes(process_df)
+        process_df = include_user_whitelist(process_df, uid_whitelist)
+        process_df = exclude_active_slurm_users(process_df)
 
-        # Identify orphaned processes and filter them by the UID whitelist
-        orphaned = process_df[process_df.PPID == INIT_PROCESS_ID]
-        whitelist_index = orphaned['UID'].apply(id_in_whitelist, whitelist=uid_whitelist)
-        to_terminate = orphaned[whitelist_index]
-
-        for _, row in to_terminate.iterrows():
+        for _, row in process_df.iterrows():  # pragma: nocover
             logging.info(f'[{node}] Marking for termination {dict(row)}')
 
-        if to_terminate.empty:
+        if process_df.empty:  # pragma: nocover
             logging.info(f'[{node}] no processes found')
 
         elif not debug:
-            proc_id_str = ','.join(to_terminate.PGID.unique().astype(str))
+            proc_id_str = ','.join(process_df.PGID.unique().astype(str))
             logging.info(f"[{node}] Sending termination signal for process groups {proc_id_str}")
             await conn.run(f"pkill --signal 9 --pgroup {proc_id_str}", check=True)

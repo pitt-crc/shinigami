@@ -1,30 +1,17 @@
-"""Tests for the ``cli.Parser`` class"""
+"""Tests for the `cli.Parser` class"""
 
 from unittest import TestCase
 
-from shinigami.cli import Parser, BaseParser
-
-
-class BaseParsing(TestCase):
-    """Test custom parsing login encapsulated by the `BaseParser`  class"""
-
-    def test_error_handling(self) -> None:
-        """Test error messages are raised as `SystemExit` instances"""
-
-        parser = BaseParser()
-        error_message = "This is an error message"
-        with self.assertRaises(SystemExit, msg=error_message):
-            parser.error(error_message)
+from shinigami.cli import Parser
 
 
 class ScanSubParser(TestCase):
-    """Test the behavior of the ``scan`` subparser"""
+    """Test the behavior of the `scan` subparser"""
 
-    def test_debug_option(self) -> None:
-        """Test parsing of the ``debug`` argument"""
+    def test_debug_arg(self) -> None:
+        """Test parsing of the `debug` argument"""
 
         parser = Parser()
-
         scan_command = ['scan', '-c', 'development', '-u' '100']
         self.assertFalse(parser.parse_args(scan_command).debug)
 
@@ -36,7 +23,6 @@ class ScanSubParser(TestCase):
 
         parser = Parser()
         base_command = ['scan', '-c', 'development', '-u' '100']
-
         self.assertEqual(0, parser.parse_args(base_command).verbosity)
         self.assertEqual(1, parser.parse_args(base_command + ['-v']).verbosity)
         self.assertEqual(2, parser.parse_args(base_command + ['-vv']).verbosity)
@@ -44,7 +30,7 @@ class ScanSubParser(TestCase):
         self.assertEqual(5, parser.parse_args(base_command + ['-vvvvv']).verbosity)
 
     def test_clusters_arg(self) -> None:
-        """Test parsing of the ``clusters`` argument"""
+        """Test parsing of the `clusters` argument"""
 
         parser = Parser()
 
@@ -56,8 +42,8 @@ class ScanSubParser(TestCase):
         multi_cluster_cmd = ['scan', '-c', *multi_cluster_out, '-u', '100']
         self.assertSequenceEqual(multi_cluster_out, parser.parse_args(multi_cluster_cmd).clusters)
 
-    def test_ignore_nodes(self) -> None:
-        """Test parsing of the ``ignore-nodes`` argument"""
+    def test_ignore_nodes_arg(self) -> None:
+        """Test parsing of the `ignore-nodes` argument"""
 
         parser = Parser()
         base_command = ['scan', '-c', 'development', '-u' '100']
@@ -71,7 +57,7 @@ class ScanSubParser(TestCase):
         self.assertSequenceEqual(multi_node_out, parser.parse_args(multi_node_cmd).ignore_nodes)
 
     def test_uid_whitelist_arg(self) -> None:
-        """Test parsing of the ``uid-whitelist`` argument"""
+        """Test parsing of the `uid-whitelist` argument"""
 
         parser = Parser()
 
@@ -97,13 +83,12 @@ class ScanSubParser(TestCase):
 
 
 class TerminateSubParser(TestCase):
-    """Test the behavior of the ``terminate`` subparser"""
+    """Test the behavior of the `terminate` subparser"""
 
-    def test_debug_option(self) -> None:
-        """Test the ``debug`` argument"""
+    def test_debug_arg(self) -> None:
+        """Test the `debug` argument"""
 
         parser = Parser()
-
         terminate_command = ['terminate', '-n', 'node1', '-u', '100']
         self.assertFalse(parser.parse_args(terminate_command).debug)
 
@@ -115,7 +100,6 @@ class TerminateSubParser(TestCase):
 
         parser = Parser()
         base_command = ['terminate', '-n', 'node', '-u' '100']
-
         self.assertEqual(0, parser.parse_args(base_command).verbosity)
         self.assertEqual(1, parser.parse_args(base_command + ['-v']).verbosity)
         self.assertEqual(2, parser.parse_args(base_command + ['-vv']).verbosity)
@@ -123,7 +107,7 @@ class TerminateSubParser(TestCase):
         self.assertEqual(5, parser.parse_args(base_command + ['-vvvvv']).verbosity)
 
     def test_nodes_arg(self) -> None:
-        """Test parsing of the ``nodes`` argument"""
+        """Test parsing of the `nodes` argument"""
 
         parser = Parser()
 
@@ -136,7 +120,7 @@ class TerminateSubParser(TestCase):
         self.assertSequenceEqual(multi_node_out, parser.parse_args(multi_node_cmd).nodes)
 
     def test_uid_whitelist_arg(self) -> None:
-        """Test parsing of the ``uid-whitelist`` argument"""
+        """Test parsing of the `uid-whitelist` argument"""
 
         parser = Parser()
 

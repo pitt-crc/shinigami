@@ -1,4 +1,4 @@
-"""The executable application and its command-line interface."""
+"""The executable application and its command line interface."""
 
 import asyncio
 import inspect
@@ -192,14 +192,14 @@ class Application:
         cls._configure_logging(args.verbosity)
 
         try:
-            # Extract the subset of arguments that are valid for the function ``args.callable``
+            # Extract the subset of arguments that are valid for the function `args.callable`
             valid_params = inspect.signature(args.callable).parameters
             valid_arguments = {key: value for key, value in vars(args).items() if key in valid_params}
             asyncio.run(args.callable(**valid_arguments))
 
-        except KeyboardInterrupt:
+        except KeyboardInterrupt:  # pragma: nocover
             pass
 
-        except Exception as caught:
+        except Exception as caught:  # pragma: nocover
             logging.getLogger('file_logger').critical('Application crash', exc_info=caught)
             logging.getLogger('console_logger').critical(str(caught))
