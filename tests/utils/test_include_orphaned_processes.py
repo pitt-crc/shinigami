@@ -1,4 +1,4 @@
-"""Tests for the `include_orphaned_processes` function."""
+"""Tests for the `utils.include_orphaned_processes` function."""
 
 import unittest
 

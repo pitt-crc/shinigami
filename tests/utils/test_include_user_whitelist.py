@@ -1,4 +1,4 @@
-"""Tests for the `include_user_whitelist` function."""
+"""Tests for the `utils.include_user_whitelist` function."""
 
 from unittest import TestCase
 

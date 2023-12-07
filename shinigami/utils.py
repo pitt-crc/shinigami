@@ -120,8 +120,8 @@ def exclude_active_slurm_users(df: pd.DataFrame) -> pd.DataFrame:
         A copy of the given DataFrame
     """
 
-    is_slurm = df['CMD'].str.contains('slurmd').any()
-    slurm_uids = is_slurm['UID']
+    is_slurm = df['CMD'].str.contains('slurmd')
+    slurm_uids = df['UID'][is_slurm].unique()
     return df[~df['UID'].isin(slurm_uids)]
 
 
@@ -152,10 +152,10 @@ async def terminate_errant_processes(
         process_df = include_user_whitelist(process_df, uid_whitelist)
         process_df = exclude_active_slurm_users(process_df)
 
-        for _, row in process_df.iterrows():
+        for _, row in process_df.iterrows():  # pragma: nocover
             logging.info(f'[{node}] Marking for termination {dict(row)}')
 
-        if process_df.empty:
+        if process_df.empty:  # pragma: nocover
             logging.info(f'[{node}] no processes found')
 
         elif not debug:

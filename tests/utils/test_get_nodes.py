@@ -1,4 +1,4 @@
-"""Tests for the `utils` module."""
+"""Tests for the `utils.get_nodes` module."""
 
 import subprocess
 from unittest import TestCase, skipIf
