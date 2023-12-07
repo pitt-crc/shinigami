@@ -18,7 +18,8 @@ def slurm_is_installed() -> bool:
         subprocess.run(['sbatch', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
         return True
 
-    except Exception:
+    # Catch all errors, but list the expected error(s) explicitly
+    except (FileNotFoundError, Exception):
         return False
 
 
@@ -29,7 +30,7 @@ class GetNodes(TestCase):
     def test_nodes_match_test_env(self) -> None:
         """Test the returned node list matches values defined in the testing environment"""
 
-        self.assertCountEqual(TEST_NODES, utils.get_nodes(TEST_CLUSTER))
+        self.assertEqual(TEST_NODES, utils.get_nodes(TEST_CLUSTER))
 
     def test_ignore_substring(self) -> None:
         """Test nodes with the included substring are ignored"""
@@ -50,7 +51,7 @@ class GetNodes(TestCase):
             utils.get_nodes('fake_cluster')
 
     def test_missing_node(self) -> None:
-        """Test no error is raised when an excuded node des not exist"""
+        """Test no error is raised when an excluded node does not exist"""
 
         excluded_nodes = {'c1', 'fake_node'}
         expected_nodes = TEST_NODES - excluded_nodes
