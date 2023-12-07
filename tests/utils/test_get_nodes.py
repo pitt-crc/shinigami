@@ -1,40 +1,28 @@
 """Tests for the `utils` module."""
 
-from unittest import TestCase
+import subprocess
+from unittest import TestCase, skipIf
 
 from shinigami import utils
-from shinigami.utils import id_in_whitelist
 
-# For information on resources defined in the testing environment,
+# For information on resources defined in the testing environment
 # see https://github.com/pitt-crc/Slurm-Test-Environment/
 TEST_CLUSTER = 'development'
 TEST_NODES = set(f'c{i}' for i in range(1, 11))
 
 
-class Whitelisting(TestCase):
-    """Tests for the ``id_in_whitelist`` function"""
+def slurm_is_installed() -> bool:
+    """Return whether `sbatch` is installed and accessible on the parent machine"""
 
-    def test_empty_whitelist(self) -> None:
-        """Test the return value is ``False`` for all ID values when the whitelist is empty"""
+    try:
+        subprocess.run(['sbatch', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        return True
 
-        self.assertFalse(id_in_whitelist(0, []))
-        self.assertFalse(id_in_whitelist(123, []))
-
-    def test_whitelisted_by_id(self) -> None:
-        """Test return values for a whitelist of explicit ID values"""
-
-        whitelist = (123, 456, 789)
-        self.assertTrue(id_in_whitelist(456, whitelist))
-        self.assertFalse(id_in_whitelist(0, whitelist))
-
-    def test_whitelisted_by_id_range(self) -> None:
-        """Test return values for a whitelist of ID ranges"""
-
-        whitelist = (0, 1, 2, (100, 300))
-        self.assertTrue(id_in_whitelist(123, whitelist))
-        self.assertFalse(id_in_whitelist(301, whitelist))
+    except Exception:
+        return False
 
 
+@skipIf(not slurm_is_installed(), 'These tests require slurm to be installed.')
 class GetNodes(TestCase):
     """Tests for the ``get_nodes`` function"""
 
