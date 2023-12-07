@@ -7,8 +7,8 @@ import pandas as pd
 from shinigami.utils import INIT_PROCESS_ID, include_user_whitelist
 
 
-class WhitelistedIDs(TestCase):
-    """Tests for the ``id_in_whitelist`` function"""
+class UserIDs(TestCase):
+    """Test the identification of whitelisted user IDs from a DataFrame of process data"""
 
     def setUp(self) -> None:
         """Define a DataFrame with example process data

@@ -25,7 +25,7 @@ def slurm_is_installed() -> bool:
 
 @skipIf(not slurm_is_installed(), 'These tests require slurm to be installed.')
 class GetNodes(TestCase):
-    """Tests for the ``get_nodes`` function"""
+    """Tests for the `get_nodes` function"""
 
     def test_nodes_match_test_env(self) -> None:
         """Test the returned node list matches values defined in the testing environment"""

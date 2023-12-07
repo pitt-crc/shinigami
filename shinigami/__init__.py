@@ -4,7 +4,7 @@ running processes not associated with a currently running Slurm job.
 
 Individual users and groups can be whitelisted in the application settings file
 via UID and GID values. Specific compute nodes can also be ignored using basic
-string matching. See the ``settings`` module for more details.
+string matching. See the `settings` module for more details.
 """
 
 import importlib.metadata

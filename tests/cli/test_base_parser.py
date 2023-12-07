@@ -1,4 +1,4 @@
-"""Tests for the ``cli.BaseParser`` class"""
+"""Tests for the `cli.BaseParser` class"""
 
 from unittest import TestCase
 

@@ -192,7 +192,7 @@ class Application:
         cls._configure_logging(args.verbosity)
 
         try:
-            # Extract the subset of arguments that are valid for the function ``args.callable``
+            # Extract the subset of arguments that are valid for the function `args.callable`
             valid_params = inspect.signature(args.callable).parameters
             valid_arguments = {key: value for key, value in vars(args).items() if key in valid_params}
             asyncio.run(args.callable(**valid_arguments))
