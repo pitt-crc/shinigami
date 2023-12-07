@@ -76,48 +76,48 @@ async def get_remote_processes(conn: asyncssh.SSHClientConnection) -> pd.DataFra
     return pd.read_fwf(StringIO(ps_return.stdout), widths=[11, 11, 11, 11, 500])
 
 
-def filter_orphaned_processes(df: pd.DataFrame) -> pd.DataFrame:
+def include_orphaned_processes(df: pd.DataFrame) -> pd.DataFrame:
     """Filter a DataFrame to only include orphaned processes
 
     Given a DataFrame with system process data, return a subset of the data
     containing processes parented by `INIT_PROCESS_ID`.
 
     Args:
-        df: DataFrame to filter
+        df: A DataFrame with a `PPID` column
 
     Returns:
-        A filtered copy of the given DataFrame
+        A copy of the given DataFrame
     """
 
     return df[df['PPID'] == INIT_PROCESS_ID]
 
 
-def filter_user_whitelist(df: pd.DataFrame, uid_whitelist: Whitelist) -> pd.DataFrame:
+def include_user_whitelist(df: pd.DataFrame, uid_whitelist: Whitelist) -> pd.DataFrame:
     """Filter a DataFrame to only include a subset of user IDs
 
     Given a DataFrame with system process data, return a subset of the data
     containing processes owned by the given user IDs.
 
     Args:
-        df: DataFrame to filter
+        df: A DataFrame with a `UID` column
         uid_whitelist: List of user IDs to whitelist
 
     Returns:
-        A filtered copy of the given DataFrame
+        A copy of the given DataFrame
     """
 
     whitelist_index = df['UID'].apply(id_in_whitelist, whitelist=uid_whitelist)
     return df[whitelist_index]
 
 
-def filter_active_slurm_users(df: pd.DataFrame) -> pd.DataFrame:
+def exclude_active_slurm_users(df: pd.DataFrame) -> pd.DataFrame:
     """Filter a DataFrame to exclude user IDs tied to a running slurm job
 
     Args:
-        df: DataFrame to filter
+        df: A DataFrame with `UID` and `CMD` columns
 
     Returns:
-        A filtered copy of the given DataFrame
+        A copy of the given DataFrame
     """
 
     is_slurm = df['CMD'].str.contains('slurmd').any()
@@ -147,10 +147,10 @@ async def terminate_errant_processes(
         logging.info(f'[{node}] Scanning for processes')
         process_df = await get_remote_processes(conn)
 
-        # Identify orphaned processes and filter them by whitelist criteria
-        process_df = filter_orphaned_processes(process_df)
-        process_df = filter_user_whitelist(process_df, uid_whitelist)
-        process_df = filter_active_slurm_users(process_df)
+        # Filter them by various whitelist/blacklist criteria
+        process_df = include_orphaned_processes(process_df)
+        process_df = include_user_whitelist(process_df, uid_whitelist)
+        process_df = exclude_active_slurm_users(process_df)
 
         for _, row in process_df.iterrows():
             logging.info(f'[{node}] Marking for termination {dict(row)}')

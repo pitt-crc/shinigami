@@ -1,16 +1,16 @@
-"""Tests for the `filter_orphaned_processes` function."""
+"""Tests for the `include_orphaned_processes` function."""
 
 import unittest
 
 import pandas as pd
 
-from shinigami.utils import filter_orphaned_processes, INIT_PROCESS_ID
+from shinigami.utils import include_orphaned_processes, INIT_PROCESS_ID
 
 
-class FilterOrphanedProcesses(unittest.TestCase):
+class OrphanedProcesses(unittest.TestCase):
     """Test the identification of orphaned processes from a DataFrame of process data"""
 
-    def test_processes_are_filtered(self) -> None:
+    def test_orphaned_processes_are_returned(self) -> None:
         """Test orphaned processes are returned from a DataFrame of process data"""
 
         input_df = pd.DataFrame({
@@ -30,7 +30,7 @@ class FilterOrphanedProcesses(unittest.TestCase):
             index=[1, 2])
 
         pd.testing.assert_frame_equal(
-            filter_orphaned_processes(input_df),
+            include_orphaned_processes(input_df),
             expected_output_df)
 
     def test_no_orphaned_processes(self) -> None:
@@ -43,7 +43,7 @@ class FilterOrphanedProcesses(unittest.TestCase):
             'UID': [0, 1, 1, 2, 2],
             'CMD': ['init', 'process_1', 'process_2', 'process_3', 'process_4']})
 
-        self.assertTrue(filter_orphaned_processes(input_df).empty)
+        self.assertTrue(include_orphaned_processes(input_df).empty)
 
     def test_all_orphaned_processes(self) -> None:
         """Test the returned DataFrame matches the input DataFrame when all processes are orphaned"""
@@ -55,7 +55,7 @@ class FilterOrphanedProcesses(unittest.TestCase):
             'UID': [1, 1, 2, 2],
             'CMD': ['process_1', 'process_2', 'process_3', 'process_4']})
 
-        returned_df = filter_orphaned_processes(input_df)
+        returned_df = include_orphaned_processes(input_df)
         pd.testing.assert_frame_equal(returned_df, input_df)
 
         # Make sure the return value is an equivalent copy and not just the original DataFrame
