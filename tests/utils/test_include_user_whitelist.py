@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import pandas as pd
 
-from shinigami.utils import INIT_PROCESS_ID, include_user_whitelist
+from shinigami.utils import include_user_whitelist
 
 
 class UserIDs(TestCase):
@@ -17,12 +17,7 @@ class UserIDs(TestCase):
         processes, and multiple user IDs.
         """
 
-        self.testing_data = pd.DataFrame({
-            'PID': [INIT_PROCESS_ID, 100, 101, 102, 103],
-            'PPID': [0, INIT_PROCESS_ID, INIT_PROCESS_ID, 100, 200],
-            'PGID': [0, 1, 1, 2, 3],
-            'UID': [0, 123, 123, 456, 789],
-            'CMD': ['init', 'process_1', 'process_2', 'process_3', 'process_4']})
+        self.testing_data = pd.DataFrame({'UID': [0, 123, 123, 456, 789]})
 
     def test_empty_whitelist(self) -> None:
         """Test the returned DataFrame is empty when the whitelist is empty"""

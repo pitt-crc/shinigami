@@ -6,7 +6,7 @@ from shinigami.cli import BaseParser
 
 
 class BaseParsing(TestCase):
-    """Test custom parsing login encapsulated by the `BaseParser`  class"""
+    """Test custom parsing logic encapsulated by the `BaseParser`  class"""
 
     def test_errors_raise_system_exit(self) -> None:
         """Test error messages are raised as `SystemExit` instances"""

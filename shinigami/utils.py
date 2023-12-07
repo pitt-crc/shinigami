@@ -10,15 +10,18 @@ from typing import Union, Tuple, Collection, List
 import asyncssh
 import pandas as pd
 
+# Technically the init process ID may vary with the system
+# architecture, but 1 is an almost universal default
 INIT_PROCESS_ID = 1
 
+# Custom type hints
 Whitelist = Collection[Union[int, Tuple[int, int]]]
 
 
-def id_in_whitelist(id_value: int, whitelist: Whitelist) -> bool:
+def _id_in_whitelist(id_value: int, whitelist: Whitelist) -> bool:
     """Return whether an ID is in a list of ID value definitions
 
-    The `whitelist`  of ID values can contain a mix of integers and tuples
+    The `whitelist` of ID values can contain a mix of integers and tuples
     of integer ranges. For example, [0, 1, (2, 9), 10] includes all IDs from
     zero through ten.
 
@@ -58,11 +61,14 @@ def get_nodes(cluster: str, ignore_nodes: Collection[str] = tuple()) -> set:
         raise RuntimeError(stderr)
 
     all_nodes = stdout.decode().strip().split('\n')
-    return set(node for node in all_nodes if node not in ignore_nodes)
+    return set(all_nodes) - set(ignore_nodes)
 
 
 async def get_remote_processes(conn: asyncssh.SSHClientConnection) -> pd.DataFrame:
-    """Fetch running process data from the remote machine
+    """Fetch running process data from a remote machine
+
+    The returned DataFrame is guaranteed to have columns `PID`, `PPID`, `PGID`,
+    `UID`, and `CND`.
 
     Args:
         conn: Open SSH connection to the machine
@@ -82,8 +88,10 @@ def include_orphaned_processes(df: pd.DataFrame) -> pd.DataFrame:
     Given a DataFrame with system process data, return a subset of the data
     containing processes parented by `INIT_PROCESS_ID`.
 
+    See the `get_remote_processes` function for the assumed DataFrame data model.
+
     Args:
-        df: A DataFrame with a `PPID` column
+        df: A DataFrame with process data
 
     Returns:
         A copy of the given DataFrame
@@ -98,23 +106,30 @@ def include_user_whitelist(df: pd.DataFrame, uid_whitelist: Whitelist) -> pd.Dat
     Given a DataFrame with system process data, return a subset of the data
     containing processes owned by the given user IDs.
 
+    See the `get_remote_processes` function for the assumed DataFrame data model.
+
     Args:
-        df: A DataFrame with a `UID` column
+        df: A DataFrame with process data
         uid_whitelist: List of user IDs to whitelist
 
     Returns:
         A copy of the given DataFrame
     """
 
-    whitelist_index = df['UID'].apply(id_in_whitelist, whitelist=uid_whitelist)
+    whitelist_index = df['UID'].apply(_id_in_whitelist, whitelist=uid_whitelist)
     return df[whitelist_index]
 
 
 def exclude_active_slurm_users(df: pd.DataFrame) -> pd.DataFrame:
     """Filter a DataFrame to exclude user IDs tied to a running slurm job
 
+    Given a DataFrame with system process data, return a subset of the data
+    that excludes processes owned by users running a `slurmd` command.
+
+    See the `get_remote_processes` function for the assumed DataFrame data model.
+
     Args:
-        df: A DataFrame with `UID` and `CMD` columns
+        df: A DataFrame with process data
 
     Returns:
         A copy of the given DataFrame
@@ -136,7 +151,7 @@ async def terminate_errant_processes(
 
     Args:
         node: The DNS resolvable name of the node to terminate processes on
-        uid_whitelist: Do not terminate processes owned by the given UID
+        uid_whitelist: Do not terminate processes owned by the given UIDs
         ssh_limit: Semaphore object used to limit concurrent SSH connections
         ssh_options: Options for configuring the outbound SSH connection
         debug: Log which process to terminate but do not terminate them

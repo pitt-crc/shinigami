@@ -1,4 +1,4 @@
-"""The executable application and its command-line interface."""
+"""The executable application and its command line interface."""
 
 import asyncio
 import inspect
