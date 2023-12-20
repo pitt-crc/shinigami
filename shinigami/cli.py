@@ -5,7 +5,7 @@ import inspect
 import logging
 import logging.config
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, RawTextHelpFormatter
 from json import loads
 from typing import List, Collection, Union
 
@@ -27,28 +27,43 @@ class Parser(ArgumentParser):
 
         # The `common` parser holds reusable argument definitions
         common = ArgumentParser(add_help=False)
-
         ssh_group = common.add_argument_group('ssh options')
-        ssh_group.add_argument('-m', dest='max_concurrent', type=int, default=1, help='maximum concurrent SSH connections')
-        ssh_group.add_argument('-t', dest='ssh_timeout', type=int, default=120, help='SSH connection timeout in seconds')
+        ssh_group.add_argument('-m', dest='max_concurrent', type=int, default=1, help='maximum concurrent SSH connections (Default: 1)')
+        ssh_group.add_argument('-t', dest='ssh_timeout', type=int, default=120, help='SSH connection timeout in seconds (Default: 120)')
 
         debug_group = common.add_argument_group('debugging options')
         debug_group.add_argument('--debug', action='store_true', help='run the application in debug mode')
         debug_group.add_argument('-v', action='count', dest='verbosity', default=0, help='set verbosity to warning (-v), info (-vv), or debug (-vvv)')
 
         # Subparser for the `Application.scan` method
-        scan = subparsers.add_parser('scan', parents=[common], help='terminate processes on one or more clusters')
-        scan.set_defaults(callable=Application.scan)
+        scan = subparsers.add_parser(
+            'scan', parents=[common], formatter_class=RawTextHelpFormatter,
+            help='terminate processes on one or more clusters',
+            description=(
+                "The `scan` function automatically terminates orphaned processes on all compute nodes in a Slurm cluster.\n"
+                "It is provided as a shorthand alternative to calling the `terminate` command with manually defined node names.\n\n"
+                "Slurm nodes are identified using the slurm installation on the current machine.\n"
+                "User IDs can be specified individually (e.g. `-u 1000 1001 1002 1003`) or as ranges (e.g. `-u 1000 [1001,1003]`)."))
 
+        scan.set_defaults(callable=Application.scan)
         scan_group = scan.add_argument_group('scanning options')
         scan_group.add_argument('-c', dest='clusters', metavar='CLUS', nargs='+', required=True, help='Slurm cluster name(s) to scan')
         scan_group.add_argument('-i', dest='ignore_nodes', metavar='NODE', nargs='*', default=[], help='ignore the given node(s)')
         scan_group.add_argument('-u', dest='uid_whitelist', metavar='UID', nargs='+', type=loads, default=[0], help='only terminate processes owned by the given user IDs')
 
         # Subparser for the `Application.terminate` method
-        terminate = subparsers.add_parser('terminate', parents=[common], help='terminate processes on one or more compute nodes')
-        terminate.set_defaults(callable=Application.terminate)
+        terminate = subparsers.add_parser(
+            'terminate', parents=[common], formatter_class=RawTextHelpFormatter,
+            help='terminate processes on one or more compute nodes',
+            description=(
+                "Automatically terminate orphaned processes on one or more Slurm compute nodes.\n\n"
+                "Processes are only terminated under the following conditions:\n"
+                f"    1. The process belongs to a process tree parented by init (PID {utils.INIT_PROCESS_ID})\n"
+                "    2. The associated user ID is in the given UID whitelist\n"
+                "    3. The user is not running any Slurm jobs on the parent machine\n\n"
+                "User IDs can be specified individually (e.g. `-u 1000 1001 1002 1003`) or as ranges (e.g. `-u 1000 [1001,1003]`)."))
 
+        terminate.set_defaults(callable=Application.terminate)
         terminate_group = terminate.add_argument_group('termination options')
         terminate_group.add_argument('-n', dest='nodes', metavar='NODE', nargs='+', required=True, help='the DNS name(s) of the node(s) to terminate')
         terminate_group.add_argument('-u', dest='uid_whitelist', metavar='UID', nargs='+', type=loads, default=[0], help='only terminate processes owned by the given user IDs')
