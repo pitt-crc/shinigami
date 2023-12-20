@@ -14,34 +14,6 @@ import pandas as pd
 # architecture, but 1 is an almost universal default
 INIT_PROCESS_ID = 1
 
-# Custom type hints
-Whitelist = Collection[Union[int, Tuple[int, int]]]
-
-
-def _id_in_whitelist(id_value: int, whitelist: Whitelist) -> bool:
-    """Return whether an ID is in a list of ID value definitions
-
-    The `whitelist` of ID values can contain a mix of integers and tuples
-    of integer ranges. For example, [0, 1, (2, 9), 10] includes all IDs from
-    zero through ten.
-
-    Args:
-        id_value: The ID value to check
-        whitelist: A collection of ID values and ID ranges
-
-    Returns:
-        Whether the ID is in the whitelist
-    """
-
-    for id_def in whitelist:
-        if hasattr(id_def, '__getitem__') and (id_def[0] <= id_value <= id_def[1]):
-            return True
-
-        elif id_value == id_def:
-            return True
-
-    return False
-
 
 def get_nodes(cluster: str, ignore_nodes: Collection[str] = tuple()) -> set:
     """Return a set of nodes included in a given Slurm cluster
@@ -100,7 +72,7 @@ def include_orphaned_processes(df: pd.DataFrame) -> pd.DataFrame:
     return df[df['PPID'] == INIT_PROCESS_ID]
 
 
-def include_user_whitelist(df: pd.DataFrame, uid_whitelist: Whitelist) -> pd.DataFrame:
+def include_user_whitelist(df: pd.DataFrame, uid_whitelist: Collection[Union[int, Tuple[int, int]]]) -> pd.DataFrame:
     """Filter a DataFrame to only include a subset of user IDs
 
     Given a DataFrame with system process data, return a subset of the data
@@ -116,8 +88,16 @@ def include_user_whitelist(df: pd.DataFrame, uid_whitelist: Whitelist) -> pd.Dat
         A copy of the given DataFrame
     """
 
-    whitelist_index = df['UID'].apply(_id_in_whitelist, whitelist=uid_whitelist)
-    return df[whitelist_index]
+    whitelisted_uid_values = []
+    for elt in uid_whitelist:
+        if isinstance(elt, int):
+            whitelisted_uid_values.append(elt)
+
+        else:
+            umin, umax = elt
+            whitelisted_uid_values.extend(range(umin, umax))
+
+    return df[df['UID'].isin(whitelisted_uid_values)]
 
 
 def exclude_active_slurm_users(df: pd.DataFrame) -> pd.DataFrame:
@@ -162,7 +142,7 @@ async def terminate_errant_processes(
         logging.info(f'[{node}] Scanning for processes')
         process_df = await get_remote_processes(conn)
 
-        # Filter them by various whitelist/blacklist criteria
+        # Filter process data by various whitelist/blacklist criteria
         process_df = include_orphaned_processes(process_df)
         process_df = include_user_whitelist(process_df, uid_whitelist)
         process_df = exclude_active_slurm_users(process_df)
