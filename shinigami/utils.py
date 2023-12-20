@@ -143,9 +143,11 @@ async def terminate_errant_processes(
         process_df = await get_remote_processes(conn)
 
         # Filter process data by various whitelist/blacklist criteria
+        # Outputs from each filter function call are passed to the next filter
+        # so the order of the function calls matter significantly
+        process_df = exclude_active_slurm_users(process_df)
         process_df = include_orphaned_processes(process_df)
         process_df = include_user_whitelist(process_df, uid_whitelist)
-        process_df = exclude_active_slurm_users(process_df)
 
         for _, row in process_df.iterrows():  # pragma: nocover
             logging.info(f'[{node}] Marking for termination {dict(row)}')
