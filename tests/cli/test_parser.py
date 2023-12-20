@@ -5,6 +5,16 @@ from unittest import TestCase
 from shinigami.cli import Parser
 
 
+class ErrorHandling(TestCase):
+    """Test custom parsing logic encapsulated by the `BaseParser`  class"""
+
+    def test_errors_raise_system_exit(self) -> None:
+        """Test error messages are raised as `SystemExit` instances"""
+
+        with self.assertRaises(SystemExit):
+            Parser().error("This is an error message")
+
+
 class ScanSubParser(TestCase):
     """Test the behavior of the `scan` subparser"""
 
