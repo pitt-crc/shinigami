@@ -79,7 +79,7 @@ class Parser(ArgumentParser):
             self.print_help()
             raise SystemExit
 
-        raise super().error(message)
+        super().error(message)
 
 
 class Application:
